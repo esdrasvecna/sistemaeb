@@ -407,7 +407,7 @@
     const isComando = nivel === "comando";
 
     if (!usuario) window.location.href = "index.html";
-    document.getElementById("userPill").textContent = `👤 ${usuario} • ${isComando ? "COMANDO" : (cargo || "USUÁRIO")}`;
+    document.getElementById("userPill").textContent = `👤 ${usuario} • ${isComando ? "COMANDO" : (patente || "USUÁRIO")}`;
 
     // Builder só comando
     const builderBlock = document.getElementById("builderBlock");
@@ -618,7 +618,24 @@ filtroCargoSel.addEventListener("change", () => loadForms());
       `;
     }
 
-    window.__enviarResposta = async (formId) => {
+    
+    // Cria um elemento DOM para o formulário (card/accordion)
+    async function renderFormCard(form) {
+      let respostasCount = 0;
+      try {
+        const rs = await db.collection("formularios_respostas").where("formId","==",form.id).get();
+        respostasCount = rs.size || 0;
+      } catch(e) {
+        // se não conseguir contar, segue sem travar
+        respostasCount = 0;
+      }
+      const html = renderFormAcc(form, form.id, respostasCount);
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html.trim();
+      return tmp.firstElementChild;
+    }
+
+window.__enviarResposta = async (formId) => {
       try {
         const formRef = db.collection("formularios").doc(formId);
         const formSnap = await formRef.get();
