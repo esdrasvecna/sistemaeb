@@ -26,11 +26,12 @@ body {
   justify-content: center;
   gap: 25px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-  position: sticky;
+  position: relative;
   top: 0;
   z-index: 100;
   border-bottom: 2px solid #c2a24a;
-}
+
+  flex-wrap: wrap;}
 
 .menu a {
   color: #f5f1e6;
@@ -312,5 +313,20 @@ nav.menu #logoutBtn {
 
 
 
-
-.logo-eb{max-width:120px;display:block;margin:0 auto 12px auto;}
+/* Brand (EB) */
+.menu .brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 6px 10px;
+}
+.menu .brand img{
+  height: 34px;
+  width: auto;
+  display:block;
+}
+@media (max-width: 560px){
+  .menu{ gap: 12px; padding: 12px 12px; }
+  .menu a{ padding: 8px 10px; }
+  .menu .brand{ width: 100%; justify-content: center; }
+}

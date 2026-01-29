@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Relatório de Ação - EXÉRCITO</title>
-  <link rel="assets/eb.png" type="image/png">
+  <link rel="icon" href="assets/img/bope-logo.png" type="image/png">
   <link rel="stylesheet" href="style.css">
 
   <style>
@@ -142,7 +142,6 @@
       <h2>Registrar Operação</h2>
 
       <div class="login-card">
-
         <form id="bopeForm">
           <div class="grid">
             <input class="full" type="text" id="tipo" placeholder="Tipo de Operação" required>
@@ -272,8 +271,7 @@
     const snapshot = await getDocs(collection(db, "operacoes"));
 
     if (snapshot.empty) {
-      listaOcorrencias.innerHTML = `<div class="login-card">
-<p class="muted">Nenhuma operação registrada ainda.</p></div>`;
+      listaOcorrencias.innerHTML = `<div class="login-card"><p class="muted">Nenhuma operação registrada ainda.</p></div>`;
       return;
     }
 

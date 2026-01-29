@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Formulários - EXÉRCITO</title>
 
-  <link rel="assets/eb.png" type="image/png">
+  <link rel="icon" href="assets/img/bope-logo.png" type="image/png">
   <link rel="stylesheet" href="style.css">
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -265,37 +265,26 @@
       <div class="hero-top">
         <div>
           <h1>🪂 Formulários</h1>
-          <p>Área exclusiva para <b>PARAQUEDISTA</b>. Você pode preencher formulários abertos. Quem é <b>COMANDO</b> pode criar e finalizar.</p>
+          <p>Área de formulários do <b>Exército</b>. Você preenche os formulários abertos da sua <b>guarnição</b>. Quem é <b>COMANDO</b> pode criar e finalizar.</p>
         </div>
         <div class="pill" id="userPill">Carregando...</div>
       </div>
     </section>
 
     <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <div class="chip">Guarnição (Cargo)</div>
+      <div class="chip">Guarnição</div>
       <select id="filtroCargo" style="max-width:360px;">
-        <option value="__MEU__">Meu cargo</option>
-
-        <optgroup label="Praças">
-          <option value="Recruta">Recruta</option>
-          <option value="Soldado">Soldado</option>
-          <option value="Cabo">Cabo</option>
-          <option value="3º Sargento">3º Sargento</option>
-          <option value="2º Sargento">2º Sargento</option>
-          <option value="1º Sargento">1º Sargento</option>
-          <option value="Subtenente">Subtenente</option>
-        </optgroup>
-        <optgroup label="Oficiais">
-          <option value="Aspirante">Aspirante</option>
-          <option value="2º Tenente">2º Tenente</option>
-          <option value="1º Tenente">1º Tenente</option>
-          <option value="Capitão">Capitão</option>
-          <option value="Major">Major</option>
-          <option value="Tenente-Coronel">Tenente-Coronel</option>
-          <option value="Coronel">Coronel</option>
-        </optgroup>
-        <option value="__TODOS__">Todos (comando)</option>
-      </select>
+  <option value="__MEU__">Minha guarnição</option>
+  <optgroup label="Guarnições">
+    <option value="Paraquedista">Paraquedista</option>
+    <option value="Infantaria">Infantaria</option>
+    <option value="Polícia do Exército">Polícia do Exército</option>
+    <option value="Forças Especiais">Forças Especiais</option>
+    <option value="Cavalaria Mecanizada">Cavalaria Mecanizada</option>
+    <option value="BAvEx">BAvEx</option>
+  </optgroup>
+  <option value="__TODOS__">Todos (comando)</option>
+</select>
     </div>
 
 
@@ -307,7 +296,6 @@
         </div>
 
         <div class="login-card">
-
           <label class="muted">Título</label>
           <input id="formTitulo" placeholder="Ex: Check-in do salto / Presença / Relatório" />
 
@@ -316,28 +304,19 @@
 
           
 
-          <label class="muted">Cargo alvo do formulário</label>
+          <label class="muted">Guarnição alvo do formulário</label>
           
 <select id="formAlvoCargo">
   <option value="">Todos (geral)</option>
-  <optgroup label="Praças">
-  <option value="Recruta">Recruta</option>
-  <option value="Soldado">Soldado</option>
-  <option value="Cabo">Cabo</option>
-  <option value="3º Sargento">3º Sargento</option>
-  <option value="2º Sargento">2º Sargento</option>
-  <option value="1º Sargento">1º Sargento</option>
-  <option value="Subtenente">Subtenente</option>
-</optgroup>
-<optgroup label="Oficiais">
-  <option value="Aspirante">Aspirante</option>
-  <option value="2º Tenente">2º Tenente</option>
-  <option value="1º Tenente">1º Tenente</option>
-  <option value="Capitão">Capitão</option>
-  <option value="Major">Major</option>
-  <option value="Tenente-Coronel">Tenente-Coronel</option>
-  <option value="Coronel">Coronel</option>
-</optgroup></select>
+  <optgroup label="Guarnições">
+    <option value="Paraquedista">Paraquedista</option>
+    <option value="Infantaria">Infantaria</option>
+    <option value="Polícia do Exército">Polícia do Exército</option>
+    <option value="Forças Especiais">Forças Especiais</option>
+    <option value="Cavalaria Mecanizada">Cavalaria Mecanizada</option>
+    <option value="BAvEx">BAvEx</option>
+  </optgroup>
+</select>
 
 <div class="section-title" style="margin-top:12px;">
             <span>Campos do formulário</span>
@@ -399,7 +378,6 @@
         </div>
 
         <div class="login-card">
-
           <div class="accordion" id="formsList">
             <div class="muted">Carregando...</div>
           </div>
@@ -412,7 +390,6 @@
           <span class="chip" id="myCount">0</span>
         </div>
         <div class="login-card">
-
           <div class="accordion" id="myAnswers">
             <div class="muted">Carregando...</div>
           </div>
@@ -469,6 +446,11 @@
 
 
     // ===== Helpers =====
+    function normStr(s){
+      return (s || "").toString().toLowerCase().trim()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
     const $ = (id) => document.getElementById(id);
     function escapeHtml(str) {
       return (str || "").toString()
@@ -553,7 +535,8 @@
             criadoPor: usuario,
             criadoEm: ts(),
             atualizadoEm: ts(),
-            alvoCargo: (document.getElementById("formAlvoCargo").value || "").toLowerCase().trim()
+            alvoCargo: (document.getElementById("formAlvoCargo").value || "").trim(),
+            alvoCargoNorm: normStr(document.getElementById("formAlvoCargo").value || "")
           });
           showNotice(builderNotice, "✅ Formulário publicado.");
           $("btnLimparForm").click();
@@ -805,7 +788,7 @@
       else if (selected !== "__MEU__") filtroCargo = selected;
 
       // normaliza
-      let filtroLower = (filtroCargo || "").toLowerCase().trim();
+      let filtroLower = normStr(filtroCargo || "");
 
       // Se usuário não tem cargo definido, mostra todos
       if (!filtroLower) filtroLower = "__todos__";
@@ -816,9 +799,9 @@
         const all = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
 
         const normAlvo = (f) => {
-          const alvo = (f.alvoCargo || "").toString().trim();
+          const alvo = (f.alvoCargoNorm || f.alvoCargo || "").toString().trim();
           if (!alvo) return "__geral__"; // legacy: formulários antigos valem para todos
-          return alvo.toLowerCase().trim();
+          return normStr(alvo);
         };
 
         const filtrados = all.filter(form => {

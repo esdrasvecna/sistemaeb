@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Treinamentos - EXÉRCITO</title>
-  <link rel="assets/eb.png" type="image/png">
+  <link rel="icon" href="assets/img/bope-logo.png" type="image/png">
   <link rel="stylesheet" href="style.css">
 
   <style>
@@ -146,7 +146,6 @@
     <section class="panel">
       <h2>Novo Treinamento</h2>
       <div class="login-card">
-
         <form id="treinamentoForm">
           <div class="grid">
             <input class="full" type="text" id="nome" placeholder="Nome do Treinamento" required>
@@ -180,7 +179,6 @@
     <section class="panel">
       <h2>Filtro</h2>
       <div class="login-card">
-
         <div class="row">
           <select id="filtroTipo">
             <option value="">Todos os tipos</option>
@@ -331,8 +329,7 @@ async function renderTreinamentos() {
   });
 
   if (!algum) {
-    lista.innerHTML = `<div class="login-card">
-<p class="muted">Nenhum treinamento encontrado com esses filtros.</p></div>`;
+    lista.innerHTML = `<div class="login-card"><p class="muted">Nenhum treinamento encontrado com esses filtros.</p></div>`;
   }
 }
 
