@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ativar Conta - EXÉRCITO</title>
+  <link rel="assets/eb.png">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-container {
+      background-color: #2c2c2c;
+      padding: 25px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 380px;
+      border: 1px solid #444;
+      text-align: center;
+    }
+
+    .login-container img {
+      width: 90px;
+      margin-bottom: 10px;
+    }
+
+    .login-container h1 {
+      margin-bottom: 10px;
+    }
+
+    .login-container p {
+      font-size: 0.9em;
+      color: #ccc;
+      margin-bottom: 15px;
+    }
+
+    .login-container input,
+    .login-container button {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .login-container input {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #555;
+    }
+
+    .login-container button {
+      background-color: #2ecc71;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .voltar {
+      background-color: #3498db;
+    }
+
+    #ativarMsg {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+
+  <!-- LOGO -->
+  <img src="assets/eb.png" alt="EXÉRCITO">
+
+  <h1>Ativar Conta</h1>
+  <p>Informe seu usuário, token recebido e defina sua senha.</p>
+
+  <form id="ativarForm">
+    <input type="text" id="ativarUser" placeholder="Usuário" required>
+    <input type="text" id="ativarToken" placeholder="Token de ativação" required>
+    <input type="password" id="ativarSenha" placeholder="Nova senha" required>
+
+    <button type="submit">Ativar Conta</button>
+  </form>
+
+  <p id="ativarMsg"></p>
+
+  <button id="voltarBtn" class="voltar" type="button">Voltar</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+  authDomain: "sistema-bope.firebaseapp.com",
+  projectId: "sistema-bope"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+function normalizeUserKey(str) {
+  return (str || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+
+const ativarForm = document.getElementById("ativarForm");
+const ativarMsg = document.getElementById("ativarMsg");
+const voltarBtn = document.getElementById("voltarBtn");
+
+ativarForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const userInput = ativarUser.value.trim();
+  const userKey = normalizeUserKey(userInput);
+  const token = ativarToken.value.trim();
+  const senha = ativarSenha.value.trim();
+
+  try {
+    let userRef = doc(db, "whitelist", userKey);
+    let userSnap = await getDoc(userRef);
+
+    // fallback: procura por campo nome/id em contas antigas
+    if (!userSnap.exists()) {
+      const { collection, query, where, getDocs, limit } = await import("https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js");
+      const col = collection(db, "whitelist");
+      let q = query(col, where("nome", "==", userInput), limit(1));
+      let qs = await getDocs(q);
+      if (qs.empty) {
+        q = query(col, where("id", "==", userInput), limit(1));
+        qs = await getDocs(q);
+      }
+      if (!qs.empty) {
+        userRef = doc(db, "whitelist", qs.docs[0].id);
+        userSnap = await getDoc(userRef);
+      }
+    }
+
+    if (!userSnap.exists()) {
+      ativarMsg.textContent = "Usuário não encontrado.";
+      return;
+    }
+
+    const data = userSnap.data();
+
+    if (data.senha) {
+      ativarMsg.textContent = "Conta já ativada.";
+      return;
+    }
+
+    if (data.token !== token) {
+      ativarMsg.textContent = "Token inválido.";
+      return;
+    }
+
+    await updateDoc(userRef, { senha: senha, token: "" });
+
+    ativarMsg.style.color = "#2ecc71";
+    ativarMsg.textContent = "Conta ativada com sucesso! Redirecionando...";
+
+    setTimeout(() => window.location.href = "index.html", 2000);
+
+  } catch (e) {
+    console.error(e);
+    ativarMsg.textContent = "Erro ao ativar conta.";
+  }
+});
+
+voltarBtn.onclick = () => window.location.href = "index.html";
+</script>
+
+</body>
+</html>

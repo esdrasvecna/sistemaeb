@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Provas - EXÉRCITO</title>
+
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase (compat, mesmo padrão do portal/lives) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Mantém o mesmo padrão visual: escuro/verde e cards */
+    .page {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 22px 14px 40px;
+    }
+    .hero {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    }
+    .hero h1 { margin: 0; font-size: 22px; color: #c2a24a; }
+    .hero p { margin: 8px 0 0; opacity: .85; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.30);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 780px){
+      .row { grid-template-columns: 1fr; }
+    }
+
+    .muted { opacity: .78; font-size: 13px; }
+
+    .q {
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.08);
+      margin-top: 10px;
+    }
+    .q h3 { margin: 0 0 10px 0; font-size: 14px; }
+    .opt {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 8px 0;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+    }
+    .opt input { width: auto; margin-top: 3px; }
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .actions button { width: auto; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .result {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.18);
+      display:none;
+    }
+    .result.show{ display:block; }
+  </style>
+
+  <script>
+    // Mesmo config do projeto
+    const firebaseConfig = {
+      apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+      authDomain: "sistema-bope.firebaseapp.com",
+      projectId: "sistema-bope",
+      storageBucket: "sistema-bope.firebasestorage.app",
+      messagingSenderId: "777994155306",
+      appId: "1:777994155306:web:a1c31903c6128a30acda53"
+    };
+
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+</head>
+
+<body>
+  <script src="menu-loader.js"></script>
+
+  <main class="page">
+    <section class="hero">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h1>📝 Mini Prova — Cursos de Formação</h1>
+          <p class="muted">Escolha um curso (CFC, ESA ou AMAN), responda e veja sua nota. O resultado pode ser salvo no sistema.</p>
+        </div>
+        <div class="pill" id="userPill">Carregando...</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div class="row">
+          <div>
+            <label><b>Curso</b></label>
+            <select id="curso">
+              <option value="CFC">CFC</option>
+              <option value="ESA">ESA</option>
+              <option value="AMAN">AMAN</option>
+            </select>
+          </div>
+          <div>
+            <label><b>Modo</b></label>
+            <select id="modo">
+              <option value="treino">Treino (mostra gabarito no final)</option>
+              <option value="avaliacao">Avaliação (sem gabarito)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-red" id="btnCarregar" type="button">Carregar prova</button>
+          <button id="btnLimpar" type="button">Limpar</button>
+        </div>
+
+        <div class="muted" style="margin-top:10px;">
+          Dica: use “Treino” para aprender e “Avaliação” para simular.
+        </div>
+      </div>
+
+      <div class="card" id="provaCard" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div><b id="provaTitulo">Prova</b></div>
+          <div class="pill" id="contador">0/0 respondidas</div>
+        </div>
+
+        <div id="questoes"></div>
+
+        <div class="actions">
+          <button class="btn-red" id="btnFinalizar" type="button">Finalizar</button>
+          <button id="btnSalvarResultado" type="button" style="display:none;">Salvar resultado</button>
+        </div>
+
+        <div class="result" id="resultadoBox"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ===== Guard =====
+    const usuario = sessionStorage.getItem("usuario");
+    const nivel = (sessionStorage.getItem("nivel") || "").toLowerCase();
+    if (!usuario) window.location.href = "index.html";
+    document.getElementById("userPill").textContent = `👤 ${usuario} • ${nivel ? nivel.toUpperCase() : "USUÁRIO"}`;
+
+    // ===== Banco de questões (mini prova) =====
+    const BANCO = {
+      CFC: [
+        { q: "Qual é o objetivo principal da disciplina em instruções militares?", a: [
+          "Aumentar apenas a velocidade de execução",
+          "Padronizar condutas e garantir cumprimento de ordens",
+          "Reduzir a necessidade de comando",
+          "Substituir a hierarquia"
+        ], c: 1 },
+        { q: "Em primeiros socorros, a prioridade inicial é:", a: [
+          "Aplicar medicação",
+          "Remover a vítima sem avaliar",
+          "Garantir segurança da cena e avaliar consciência",
+          "Dar água imediatamente"
+        ], c: 2 },
+        { q: "A cadeia de comando serve para:", a: [
+          "Evitar comunicação",
+          "Organizar responsabilidades e decisões",
+          "Eliminar liderança",
+          "Diminuir disciplina"
+        ], c: 1 },
+        { q: "Durante uma formatura, a postura correta é:", a: [
+          "Relaxada e com movimentação",
+          "Em posição adequada conforme comando, com atenção",
+          "Conversando em baixa voz",
+          "Com as mãos nos bolsos"
+        ], c: 1 },
+        { q: "Um relatório operacional deve ser:", a: [
+          "Vago e curto",
+          "Somente verbal",
+          "Objetivo, claro e com informações verificáveis",
+          "Sem data/horário"
+        ], c: 2 }
+      ],
+      ESA: [
+        { q: "Qual é um princípio básico de liderança militar?", a: [
+          "Indecisão",
+          "Exemplo pessoal e responsabilidade",
+          "Evitar instrução",
+          "Delegar sem acompanhar"
+        ], c: 1 },
+        { q: "Planejamento de missão deve incluir:", a: [
+          "Somente o horário",
+          "Objetivo, meios, riscos e coordenação",
+          "Apenas armamento",
+          "Somente o local"
+        ], c: 1 },
+        { q: "Comunicação eficaz em operação é:", a: [
+          "Opcional",
+          "Baseada em mensagens confusas",
+          "Clara, breve e padronizada",
+          "Apenas por gestos"
+        ], c: 2 },
+        { q: "Em patrulha, a segurança é aumentada com:", a: [
+          "Sem observação",
+          "Disciplina de ruído e uso de cobertura",
+          "Andar em área aberta sempre",
+          "Ignorar o terreno"
+        ], c: 1 },
+        { q: "A tomada de decisão sob pressão exige:", a: [
+          "Improviso sem análise",
+          "Análise rápida, foco na missão e controle emocional",
+          "Desorganização",
+          "Aguardar indefinidamente"
+        ], c: 1 }
+      ],
+      AMAN: [
+        { q: "A ética militar orienta principalmente:", a: [
+          "Somente punições",
+          "Conduta, honra e dever no serviço",
+          "Apenas o uniforme",
+          "Somente o armamento"
+        ], c: 1 },
+        { q: "O comando e controle em operações visa:", a: [
+          "Centralizar sem coordenação",
+          "Sincronizar esforços e manter consciência situacional",
+          "Evitar comunicação",
+          "Eliminar planejamento"
+        ], c: 1 },
+        { q: "Um líder eficaz deve:", a: [
+          "Evitar feedback",
+          "Motivar, orientar e desenvolver a equipe",
+          "Delegar tudo e sumir",
+          "Ignorar disciplina"
+        ], c: 1 },
+        { q: "Gerenciamento de risco operacional significa:", a: [
+          "Ignorar ameaças",
+          "Identificar, avaliar e mitigar riscos para cumprir a missão",
+          "Nunca agir",
+          "Somente registrar depois"
+        ], c: 1 },
+        { q: "Doutrina militar é:", a: [
+          "Opinião pessoal",
+          "Conjunto de princípios e procedimentos para orientar ações",
+          "Algo informal",
+          "Apenas treinamento físico"
+        ], c: 1 }
+      ]
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const provaCard = $("provaCard");
+    const questoesEl = $("questoes");
+    const contadorEl = $("contador");
+    const resultadoBox = $("resultadoBox");
+    const btnSalvar = $("btnSalvarResultado");
+
+    let provaAtual = null;
+
+    function atualizarContador(){
+      if (!provaAtual) return;
+      const total = provaAtual.length;
+      const marcadas = questoesEl.querySelectorAll("input[type=radio]:checked").length;
+      contadorEl.textContent = `${marcadas}/${total} respondidas`;
+    }
+
+    function renderProva(curso){
+      provaAtual = BANCO[curso].map((x, i) => ({...x, i}));
+      $("provaTitulo").textContent = `📘 Prova: ${curso}`;
+      questoesEl.innerHTML = "";
+
+      provaAtual.forEach((item, idx) => {
+        const wrap = document.createElement("div");
+        wrap.className = "q";
+        wrap.innerHTML = `<h3>${idx+1}. ${item.q}</h3>`;
+
+        item.a.forEach((opt, j) => {
+          const id = `q${idx}_o${j}`;
+          const label = document.createElement("label");
+          label.className = "opt";
+          label.setAttribute("for", id);
+          label.innerHTML = `
+            <input id="${id}" type="radio" name="q${idx}" value="${j}" />
+            <div>${opt}</div>
+          `;
+          label.addEventListener("click", () => setTimeout(atualizarContador, 0));
+          wrap.appendChild(label);
+        });
+
+        questoesEl.appendChild(wrap);
+      });
+
+      resultadoBox.classList.remove("show");
+      resultadoBox.innerHTML = "";
+      btnSalvar.style.display = "none";
+      provaCard.style.display = "block";
+      atualizarContador();
+      window.scrollTo({top: 0, behavior: "smooth"});
+    }
+
+    function calcularResultado(){
+      if (!provaAtual) return null;
+      const curso = $("curso").value;
+      const modo = $("modo").value;
+
+      let acertos = 0;
+      const detalhes = [];
+
+      provaAtual.forEach((item, idx) => {
+        const checked = questoesEl.querySelector(`input[name="q${idx}"]:checked`);
+        const marcado = checked ? Number(checked.value) : null;
+        const correto = item.c;
+
+        if (marcado === correto) acertos++;
+
+        detalhes.push({
+          idx,
+          marcado,
+          correto
+        });
+      });
+
+      const total = provaAtual.length;
+      const pct = Math.round((acertos / total) * 100);
+
+      // render
+      let html = `<b>Resultado:</b> ${acertos}/${total} (${pct}%)<br><br>`;
+      if (modo === "treino") {
+        html += `<b>Gabarito:</b><br>`;
+        detalhes.forEach(d => {
+          const certo = provaAtual[d.idx].a[d.correto];
+          const marcou = (d.marcado === null) ? "Não respondeu" : provaAtual[d.idx].a[d.marcado];
+          const ok = d.marcado === d.correto;
+          html += `Q${d.idx+1}: ${ok ? "✅" : "❌"}<br><span class="muted">Você: ${marcou} • Correto: ${certo}</span><br><br>`;
+        });
+      } else {
+        html += `<span class="muted">Modo avaliação: gabarito oculto.</span>`;
+      }
+
+      resultadoBox.innerHTML = html;
+      resultadoBox.classList.add("show");
+
+      btnSalvar.style.display = "inline-block";
+
+      return { curso, modo, acertos, total, pct };
+    }
+
+    async function salvarResultado(result){
+      try{
+        await db.collection("provas_resultados").add({
+          usuario,
+          nivel: nivel || "usuario",
+          curso: result.curso,
+          modo: result.modo,
+          acertos: result.acertos,
+          total: result.total,
+          percentual: result.pct,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        alert("✅ Resultado salvo!");
+      }catch(err){
+        console.error(err);
+        alert("❌ Erro ao salvar resultado. Veja o console.");
+      }
+    }
+
+    $("btnCarregar").addEventListener("click", () => {
+      const curso = $("curso").value;
+      renderProva(curso);
+    });
+
+    $("btnLimpar").addEventListener("click", () => {
+      provaCard.style.display = "none";
+      questoesEl.innerHTML = "";
+      provaAtual = null;
+      resultadoBox.classList.remove("show");
+      resultadoBox.innerHTML = "";
+      btnSalvar.style.display = "none";
+    });
+
+    $("btnFinalizar").addEventListener("click", () => {
+      const res = calcularResultado();
+      if (!res) return;
+      btnSalvar.onclick = () => salvarResultado(res);
+    });
+
+    // atualiza contador conforme marca opções
+    questoesEl.addEventListener("change", atualizarContador);
+  </script>
+</body>
+</html>

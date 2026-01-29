@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EXÉRCITO GTA RP - Login</title>
+  <link rel="assets/eb.png">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-container {
+      background-color: #2c2c2c;
+      padding: 25px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 350px;
+      border: 1px solid #444;
+      text-align: center;
+    }
+
+    .login-container img {
+      width: 90px;
+      margin-bottom: 10px;
+    }
+
+    .login-container h1 {
+      margin-bottom: 20px;
+    }
+
+    .login-container input,
+    .login-container button {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    .login-container input {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #555;
+    }
+
+    .login-container button {
+      background-color: #3498db;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .links a {
+      display: block;
+      margin-top: 6px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .ativar {
+      color: #2ecc71;
+    }
+
+    .registrar {
+      color: #3498db;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+
+  <!-- LOGO EXÉRCITO -->
+  <img src="assets/eb.png" alt="EXÉRCITO">
+
+  <h1>Login EXÉRCITO</h1>
+
+  <input type="text" id="nome" placeholder="Nome">
+  <input type="password" id="senha" placeholder="Senha">
+
+  <button onclick="login()">Entrar</button>
+
+  <div class="links">
+    <a href="ativar.html" class="ativar">Ativar conta</a>
+    <a href="register.html" class="registrar">Solicitar acesso</a>
+  </div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+  authDomain: "sistema-bope.firebaseapp.com",
+  projectId: "sistema-bope"
+});
+
+const db = getFirestore(app);
+
+function normalizeUserKey(str) {
+  return (str || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+
+window.login = async function () {
+  const nome = document.getElementById("nome").value.trim();
+  const senha = document.getElementById("senha").value.trim();
+
+  if (!nome || !senha) {
+    alert("Preencha todos os campos");
+    return;
+  }
+
+  try {
+    const nomeInput = nome;
+const key = normalizeUserKey(nomeInput);
+
+// 1) tenta pelo docId normalizado
+let ref = doc(db, "whitelist", key);
+let snap = await getDoc(ref);
+
+// 2) fallback: tenta achar por campo "nome" (caso exista conta antiga com docId diferente)
+if (!snap.exists()) {
+  const { collection, query, where, getDocs, limit } = await import("https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js");
+  const col = collection(db, "whitelist");
+
+  // tenta pelo nome exato
+  let q = query(col, where("nome", "==", nomeInput.trim()), limit(1));
+  let qs = await getDocs(q);
+
+  // tenta pelo ID (caso o usuário esteja digitando o ID)
+  if (qs.empty) {
+    q = query(col, where("id", "==", nomeInput.trim()), limit(1));
+    qs = await getDocs(q);
+  }
+
+  if (!qs.empty) {
+    const d0 = qs.docs[0];
+    ref = doc(db, "whitelist", d0.id);
+    snap = await getDoc(ref);
+  }
+}
+
+if (!snap.exists()) {
+  alert("Usuário não encontrado");
+  return;
+}
+
+const data = snap.data();
+
+    if (!data.senha) {
+      alert("Conta ainda não ativada");
+      return;
+    }
+
+    if (data.senha !== senha) {
+      alert("Senha incorreta");
+      return;
+    }
+
+    sessionStorage.setItem("usuario", data.nome || nomeInput.trim());
+    sessionStorage.setItem("userKey", snap.id);
+    sessionStorage.setItem("nivel", data.nivel);
+    // opcional: usado para permissões específicas (ex.: paraquedista)
+    sessionStorage.setItem("patente", data.patente || "");
+    sessionStorage.setItem("cargo", data.cargo || "");
+
+    window.location.href = "portal.html";
+
+  } catch (e) {
+    console.error(e);
+    alert("Erro ao fazer login");
+  }
+};
+</script>
+
+</body>
+</html>
+
+

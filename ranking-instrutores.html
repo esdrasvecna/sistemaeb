@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ranking de Instrutores - EXÉRCITO</title>
+
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Mantém o padrão escuro do site e só dá um upgrade no visual do ranking */
+    .ranking-wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px 14px 34px;
+    }
+
+    .hero {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 18px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 22px 55px rgba(0,0,0,0.40);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hero p {
+      margin: 8px 0 0;
+      opacity: 0.82;
+      line-height: 1.35;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform .18s ease, filter .18s ease;
+    }
+    .stat:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .stat .label { opacity: 0.75; font-size: 12px; }
+    .stat .value { font-size: 18px; font-weight: 900; margin-top: 6px; }
+
+    .panel {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(6px);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .search {
+      flex: 1;
+      min-width: 220px;
+      border-radius: 14px;
+      padding: 11px 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #fff;
+      outline: none;
+      transition: border-color .16s ease, filter .16s ease, transform .16s ease;
+      box-sizing: border-box;
+    }
+    .search:focus { filter: brightness(1.04); transform: translateY(-1px); }
+
+    .select {
+      min-width: 220px;
+      border-radius: 14px;
+      padding: 11px 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #fff;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .select option { color: #000; }
+
+    .hint { opacity: 0.75; font-size: 12px; white-space: nowrap; }
+
+    /* Card extra: Instrutor do mês */
+    .spotlight {
+      margin-top: 12px;
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 14px 35px rgba(0,0,0,0.25);
+    }
+    .spotlight .title {
+      font-weight: 900;
+      margin: 0 0 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .badge {
+      font-size: 12px;
+      font-weight: 900;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      opacity: .95;
+      white-space: nowrap;
+    }
+
+    /* PÓDIO (Top 1 destacado no meio) */
+    .podium {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+      align-items: stretch;
+    }
+
+    .podium-card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 14px 35px rgba(0,0,0,0.25);
+      transition: transform .18s ease, filter .18s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .podium-card:hover { transform: translateY(-3px); filter: brightness(1.03); }
+
+    .podium-card .pos { font-weight: 900; opacity: 0.92; }
+    .podium-card .name {
+      margin-top: 8px;
+      font-weight: 900;
+      font-size: 16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .podium-card .count { margin-top: 8px; opacity: 0.88; font-weight: 800; }
+
+    .podium-card.top1 {
+      transform: translateY(-6px);
+      border-color: rgba(255,255,255,0.16);
+      box-shadow: 0 22px 60px rgba(0,0,0,0.45);
+    }
+    .podium-card.top1::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.10), transparent 55%);
+      transform: rotate(15deg);
+      pointer-events: none;
+    }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .rank-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.20);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .rank-item:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .chip {
+      font-weight: 900;
+      min-width: 48px;
+      text-align: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .who { min-width: 0; }
+    .who .name {
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .who .sub {
+      font-size: 12px;
+      opacity: 0.75;
+      margin-top: 2px;
+    }
+
+    .count { font-weight: 900; white-space: nowrap; opacity: 0.95; }
+
+    .empty {
+      text-align: center;
+      padding: 18px 10px;
+      opacity: 0.8;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    @media (max-width: 760px) {
+      .stats { grid-template-columns: 1fr; }
+      .podium { grid-template-columns: 1fr; }
+      .podium-card.top1 { transform: translateY(0); }
+      .select { width: 100%; }
+    }
+  </style>
+</head>
+
+<body>
+  <script src="menu-loader.js"></script>
+
+  <div class="ranking-wrap">
+    <section class="hero">
+      <h1>🏆 Ranking de Instrutores</h1>
+      <p>Baseado nos instrutores marcados no sistema e nos treinamentos registrados.</p>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="label">Instrutores</div>
+          <div class="value" id="statInstrutores">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Treinamentos (no período)</div>
+          <div class="value" id="statTreinos">—</div>
+        </div>
+        <div class="stat">
+          <div class="label">Líder (no período)</div>
+          <div class="value" id="statLider">—</div>
+        </div>
+      </div>
+
+      <div class="spotlight" id="spotlight" style="display:none;">
+        <div class="title">
+          <span>⭐ Instrutor do mês</span>
+          <span class="badge" id="spotlightMonth">—</span>
+        </div>
+        <div style="font-weight:900; font-size:16px;" id="spotlightName">—</div>
+        <div style="opacity:.85; margin-top:6px;" id="spotlightCount">—</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="toolbar">
+        <input id="search" class="search" placeholder="Buscar instrutor..." autocomplete="off">
+        <select id="periodo" class="select" title="Período">
+          <option value="all">Período: Tudo</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="30">Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option>
+        </select>
+        <div class="hint" id="hint">Carregando...</div>
+      </div>
+
+      <div class="podium" id="podium"></div>
+      <div class="list" id="lista"></div>
+    </section>
+  </div>
+
+  <script>
+    // Proteção básica
+    if (!sessionStorage.getItem("usuario")) {
+      window.location.href = "index.html";
+    }
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+      authDomain: "sistema-bope.firebaseapp.com",
+      projectId: "sistema-bope"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const statInstrutores = document.getElementById("statInstrutores");
+    const statTreinos = document.getElementById("statTreinos");
+    const statLider = document.getElementById("statLider");
+    const hint = document.getElementById("hint");
+    const podium = document.getElementById("podium");
+    const lista = document.getElementById("lista");
+    const search = document.getElementById("search");
+    const periodo = document.getElementById("periodo");
+
+    const spotlight = document.getElementById("spotlight");
+    const spotlightMonth = document.getElementById("spotlightMonth");
+    const spotlightName = document.getElementById("spotlightName");
+    const spotlightCount = document.getElementById("spotlightCount");
+
+    let instrutoresSet = new Set();     // nomes de instrutores marcados
+    let treinosCache = [];             // treinamentos
+    let rankingCache = [];             // ranking calculado
+
+    function normalize(v) {
+      return (v || "").toString().trim();
+    }
+
+    // Aceita instrutor: true / "sim" / "Sim" / "SIM"
+    function isInstrutorFlag(v) {
+      if (v === true) return true;
+      const s = (v || "").toString().trim().toLowerCase();
+      return s === "sim" || s === "true" || s === "1";
+    }
+
+    // Parse data "YYYY-MM-DD"
+    function parseDateStr(dateStr) {
+      const s = normalize(dateStr);
+      if (!s) return null;
+      // Força UTC para evitar bug de timezone
+      const d = new Date(s + "T00:00:00Z");
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function withinPeriod(dateStr) {
+      const mode = periodo.value;
+      if (mode === "all") return true;
+
+      const d = parseDateStr(dateStr);
+      if (!d) return false;
+
+      const days = Number(mode);
+      const now = new Date();
+      const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // hoje 00:00 local
+      cutoff.setDate(cutoff.getDate() - days);
+
+      // d está em UTC 00:00; comparar por time é ok
+      return d.getTime() >= cutoff.getTime();
+    }
+
+    function fmtCount(n) {
+      return `${n} ${n === 1 ? "treinamento" : "treinamentos"}`;
+    }
+
+    function render() {
+      const q = search.value.trim().toLowerCase();
+      const filtered = rankingCache.filter(r => r.nome.toLowerCase().includes(q));
+
+      // Pódio (Top 1 no meio)
+      podium.innerHTML = "";
+      const top3 = filtered.slice(0, 3);
+
+      const order = [];
+      if (top3[1]) order.push({ r: top3[1], pos: 2 });
+      if (top3[0]) order.push({ r: top3[0], pos: 1 });
+      if (top3[2]) order.push({ r: top3[2], pos: 3 });
+
+      order.forEach(({ r, pos }) => {
+        const div = document.createElement("div");
+        div.className = "podium-card" + (pos === 1 ? " top1" : "");
+        const medal = pos === 1 ? "🥇" : (pos === 2 ? "🥈" : "🥉");
+
+        div.innerHTML = `
+          <div class="pos">${medal} #${pos}</div>
+          <div class="name">${r.nome}</div>
+          <div class="count">${fmtCount(r.qtd)}</div>
+        `;
+        podium.appendChild(div);
+      });
+
+      // Lista
+      lista.innerHTML = "";
+      if (filtered.length === 0) {
+        lista.innerHTML = `<div class="empty">Nenhum instrutor encontrado.</div>`;
+        return;
+      }
+
+      filtered.forEach((r, idx) => {
+        const div = document.createElement("div");
+        div.className = "rank-item";
+        div.innerHTML = `
+          <div class="left">
+            <div class="chip">#${idx + 1}</div>
+            <div class="who">
+              <div class="name">${r.nome}</div>
+              <div class="sub">${r.qtd === 0 ? "Sem registros no período" : "Registrado no sistema"}</div>
+            </div>
+          </div>
+          <div class="count">${fmtCount(r.qtd)}</div>
+        `;
+        lista.appendChild(div);
+      });
+    }
+
+    function computeRanking() {
+      // Inicializa todos os instrutores com 0
+      const counts = {};
+      instrutoresSet.forEach(nome => counts[nome] = 0);
+
+      // Conta treinamentos apenas dos instrutores marcados e no período selecionado
+      let totalPeriodo = 0;
+
+      treinosCache.forEach(t => {
+        const instrutor = normalize(t.instrutor);
+        if (!instrutor) return;
+        if (!instrutoresSet.has(instrutor)) return;
+
+        // Campo de data do treinamento costuma ser "data" no seu projeto
+        if (!withinPeriod(t.data)) return;
+
+        counts[instrutor] += 1;
+        totalPeriodo += 1;
+      });
+
+      rankingCache = Object.entries(counts)
+        .map(([nome, qtd]) => ({ nome, qtd }))
+        .sort((a, b) => b.qtd - a.qtd || a.nome.localeCompare(b.nome));
+
+      // Stats
+      statInstrutores.textContent = String(instrutoresSet.size);
+      statTreinos.textContent = String(totalPeriodo);
+      statLider.textContent = rankingCache[0] ? rankingCache[0].nome : "—";
+
+      hint.textContent = instrutoresSet.size
+        ? "Dica: use a busca e o filtro de período."
+        : "Nenhum instrutor marcado em Usuários.";
+
+      // Instrutor do mês (mês atual)
+      buildInstrutorDoMes();
+
+      render();
+    }
+
+    function buildInstrutorDoMes() {
+      // calcula apenas mês atual, independente do filtro de período
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth(); // 0-11
+
+      // contagem mês
+      const monthCounts = {};
+      instrutoresSet.forEach(nome => monthCounts[nome] = 0);
+
+      treinosCache.forEach(t => {
+        const instrutor = normalize(t.instrutor);
+        if (!instrutor) return;
+        if (!instrutoresSet.has(instrutor)) return;
+
+        const d = parseDateStr(t.data);
+        if (!d) return;
+
+        const local = new Date(d.getTime());
+        if (local.getFullYear() === y && local.getMonth() === m) {
+          monthCounts[instrutor] += 1;
+        }
+      });
+
+      const sorted = Object.entries(monthCounts)
+        .map(([nome, qtd]) => ({ nome, qtd }))
+        .sort((a,b) => b.qtd - a.qtd || a.nome.localeCompare(b.nome));
+
+      const leader = sorted[0];
+      const monthName = now.toLocaleString("pt-BR", { month: "long" });
+
+      spotlightMonth.textContent = monthName;
+      if (leader && leader.qtd > 0) {
+        spotlight.style.display = "";
+        spotlightName.textContent = leader.nome;
+        spotlightCount.textContent = fmtCount(leader.qtd) + " neste mês";
+      } else {
+        // Se ninguém registrou nada no mês, esconde (fica clean)
+        spotlight.style.display = "none";
+      }
+    }
+
+    // ======= LISTENERS (REALTIME) =======
+    // 1) Whitelist: pega instrutores marcados
+    db.collection("whitelist").onSnapshot(snap => {
+      const set = new Set();
+      snap.forEach(doc => {
+        const u = doc.data() || {};
+        const nome = normalize(u.nome) || doc.id;
+        if (nome && isInstrutorFlag(u.instrutor)) set.add(nome);
+      });
+      instrutoresSet = set;
+      computeRanking();
+    }, err => {
+      console.error(err);
+      hint.textContent = "Erro ao carregar instrutores (ver console).";
+    });
+
+    // 2) Treinamentos: cache e recalcula
+    db.collection("treinamentos").onSnapshot(snap => {
+      treinosCache = [];
+      snap.forEach(doc => treinosCache.push(doc.data() || {}));
+      computeRanking();
+    }, err => {
+      console.error(err);
+      hint.textContent = "Erro ao carregar treinamentos (ver console).";
+    });
+
+    // UI
+    search.addEventListener("input", render);
+    periodo.addEventListener("change", computeRanking);
+  </script>
+</body>
+</html>

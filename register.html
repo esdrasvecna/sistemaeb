@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Solicitar Acesso</title>
+
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-container {
+      background-color: #2c2c2c;
+      padding: 25px;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #444;
+    }
+
+    input, select, button {
+      width: 100%;
+      margin-bottom: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+    }
+
+    input, select {
+      background-color: #1e1e1e;
+      color: #fff;
+      border: 1px solid #555;
+    }
+
+    button {
+      background-color: #2ecc71;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-container">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+  <h1>Solicitar Acesso</h1>
+
+  <form id="registerForm">
+    <input type="text" id="regNome" placeholder="Nome completo" required>
+    <input type="text" id="regId" placeholder="ID" required>
+
+    <select id="regPatente" required>
+      <option value="">Selecione a patente</option>
+      <option>Soldado</option>
+      <option>Cabo</option>
+      <option>Sargento</option>
+      <option>Tenente</option>
+      <option>Capitão</option>
+    </select>
+
+    <button type="submit">Enviar Solicitação</button>
+  </form>
+
+  <button onclick="window.location.href='index.html'">Voltar</button>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+    authDomain: "sistema-bope.firebaseapp.com",
+    projectId: "sistema-bope"
+  });
+
+  const db = getFirestore(app);
+
+function normalizeUserKey(str) {
+  return (str || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+
+  document.getElementById("registerForm").addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const nome = regNome.value.trim();
+    const userKey = normalizeUserKey(nome);
+
+    await setDoc(doc(db, "pendentes", userKey), {
+      nome: nome,
+      userKey: userKey,
+      id: regId.value.trim(),
+      patente: regPatente.value
+    });
+
+    alert("Solicitação enviada!");
+    e.target.reset();
+  });
+</script>
+
+</body>
+
+</html>
+
+

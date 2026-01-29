@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Treinamentos - EXÉRCITO</title>
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    body { background-color: #1e1e1e; color: #fff; font-family: Arial, sans-serif; }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px 14px 34px;
+    }
+
+    .hero {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 18px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+    }
+    .hero h1 { margin: 0; font-size: 22px; letter-spacing: .2px; }
+    .hero p { margin: 8px 0 0; opacity: .82; line-height: 1.35; }
+
+    .panel {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(6px);
+    }
+
+    .panel h2 { margin: 0 0 12px 0; font-size: 16px; opacity: .95; }
+
+    .login-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .full { grid-column: 1 / -1; }
+
+    input, select, button {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      outline: none;
+      box-sizing: border-box;
+    }
+    select option { color: #000; }
+
+    input:focus, select:focus { filter: brightness(1.05); }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .row > * { flex: 1; min-width: 180px; }
+
+    #listaTreinamentos { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+
+    .operacao-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.20);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .operacao-card:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .title-row strong { font-size: 15px; }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .chip {
+      font-size: 12px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      white-space: nowrap;
+      opacity: .9;
+    }
+    .chip.warn { opacity: .85; }
+
+    .meta { opacity: .92; line-height: 1.35; }
+    .meta div { margin: 3px 0; }
+
+    .acoes {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .acoes button { width: auto; padding: 10px 12px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+    .btn-editar { background: #3498db; border: none; color: #fff; }
+    .btn-excluir { background: #e74c3c; border: none; color: #fff; }
+
+    .muted { opacity: .75; font-size: 12px; margin-top: 10px; }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      .row > * { min-width: 100%; }
+      .title-row { flex-direction: column; align-items: flex-start; }
+      .badges { justify-content: flex-start; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- MENU DINÂMICO -->
+  <script src="menu-loader.js"></script>
+
+  <main class="page">
+    <section class="hero">
+      <h1>Treinamentos EXÉRCITO</h1>
+      <p>Cadastre, filtre e gerencie treinamentos com visual padronizado do sistema.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Novo Treinamento</h2>
+      <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+        <form id="treinamentoForm">
+          <div class="grid">
+            <input class="full" type="text" id="nome" placeholder="Nome do Treinamento" required>
+            <input class="full" type="text" id="local" placeholder="Local" required>
+
+            <input type="time" id="horario" required>
+            <input type="date" id="data" required>
+
+            <select class="full" id="tipo" required>
+              <option value="">Tipo</option>
+              <option>TAF</option>
+              <option>Rotina</option>
+              <option>Padronização</option>
+              <option>Tático</option>
+              <option>Intensivo</option>
+              <option>Obrigatório</option>
+            </select>
+
+            <input class="full" type="text" id="instrutor" placeholder="Instrutor" required>
+          </div>
+
+          <div class="row">
+            <button type="submit" class="btn-green">Salvar Treinamento</button>
+          </div>
+        </form>
+
+        <div class="muted" id="formHint"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Filtro</h2>
+      <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+        <div class="row">
+          <select id="filtroTipo">
+            <option value="">Todos os tipos</option>
+            <option>TAF</option>
+            <option>Rotina</option>
+            <option>Padronização</option>
+            <option>Tático</option>
+            <option>Intensivo</option>
+            <option>Obrigatório</option>
+          </select>
+
+          <input type="date" id="filtroData">
+        </div>
+        <div class="muted">Dica: selecione um tipo e/ou uma data para filtrar a lista abaixo.</div>
+      </div>
+
+      <div id="listaTreinamentos"></div>
+    </section>
+  </main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+  authDomain: "sistema-bope.firebaseapp.com",
+  projectId: "sistema-bope",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const nivel = sessionStorage.getItem("nivel");
+const ehInstrutor = sessionStorage.getItem("instrutor") === "true";
+const usuario = sessionStorage.getItem("usuario");
+
+if (!usuario) location.href = "index.html";
+
+const form = document.getElementById("treinamentoForm");
+const lista = document.getElementById("listaTreinamentos");
+const formHint = document.getElementById("formHint");
+
+if (!(nivel === "comando" || ehInstrutor)) {
+  form.style.display = "none";
+  formHint.textContent = "Apenas instrutores/comando podem cadastrar treinamentos.";
+}
+
+if (ehInstrutor) {
+  instrutor.value = usuario;
+  instrutor.readOnly = true;
+}
+
+function linha(label, value) {
+  const v = (value ?? "").toString().trim();
+  if (!v) return "";
+  return `<div><strong>${label}:</strong> ${v}</div>`;
+}
+
+async function renderTreinamentos() {
+  lista.innerHTML = "";
+  const snap = await getDocs(collection(db, "treinamentos"));
+  const hoje = new Date().toISOString().split("T")[0];
+
+  let algum = false;
+
+  snap.forEach(d => {
+    const t = d.data();
+
+    if (filtroTipo.value && t.tipo !== filtroTipo.value) return;
+    if (filtroData.value && t.data !== filtroData.value) return;
+
+    algum = true;
+
+    const encerrado = (t.data && t.data < hoje);
+
+    const div = document.createElement("div");
+    div.className = "operacao-card";
+
+    div.innerHTML = `
+      <div class="title-row">
+        <strong>${(t.nome || "Treinamento").toString()}</strong>
+        <div class="badges">
+          ${t.tipo ? `<span class="chip">${t.tipo}</span>` : ""}
+          ${(t.data || t.horario) ? `<span class="chip">${(t.data || "")} ${(t.horario || "")}</span>` : ""}
+          ${encerrado ? `<span class="chip warn">ENCERRADO</span>` : ""}
+        </div>
+      </div>
+
+      <div class="meta">
+        ${linha("Local", t.local)}
+        ${linha("Instrutor", t.instrutor)}
+      </div>
+
+      ${(nivel === "comando" || ehInstrutor) ? `
+        <div class="acoes">
+          <button class="btn-editar">Editar</button>
+          <button class="btn-excluir">Excluir</button>
+        </div>
+      ` : ""}
+    `;
+
+    if (nivel === "comando" || ehInstrutor) {
+      div.querySelector(".btn-excluir").onclick = async () => {
+        if (!confirm("Excluir treinamento?")) return;
+        await deleteDoc(doc(db, "treinamentos", d.id));
+        renderTreinamentos();
+      };
+
+      div.querySelector(".btn-editar").onclick = () => {
+        nome.value = t.nome || "";
+        local.value = t.local || "";
+        horario.value = t.horario || "";
+        data.value = t.data || "";
+        tipo.value = t.tipo || "";
+        instrutor.value = t.instrutor || "";
+
+        formHint.textContent = "Modo edição ativo: altere os campos e clique em Salvar Treinamento para atualizar.";
+
+        form.onsubmit = async (e) => {
+          e.preventDefault();
+          await updateDoc(doc(db, "treinamentos", d.id), {
+            nome: nome.value,
+            local: local.value,
+            horario: horario.value,
+            data: data.value,
+            tipo: tipo.value,
+            instrutor: instrutor.value
+          });
+          form.reset();
+          formHint.textContent = "";
+          if (ehInstrutor) instrutor.value = usuario;
+          form.onsubmit = submitPadrao;
+          renderTreinamentos();
+        };
+      };
+    }
+
+    lista.appendChild(div);
+  });
+
+  if (!algum) {
+    lista.innerHTML = `<div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb"><p class="muted">Nenhum treinamento encontrado com esses filtros.</p></div>`;
+  }
+}
+
+const submitPadrao = form.onsubmit;
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  await addDoc(collection(db, "treinamentos"), {
+    nome: nome.value,
+    local: local.value,
+    horario: horario.value,
+    data: data.value,
+    tipo: tipo.value,
+    instrutor: instrutor.value
+  });
+  form.reset();
+  formHint.textContent = "";
+  if (ehInstrutor) instrutor.value = usuario;
+  renderTreinamentos();
+});
+
+filtroTipo.onchange = renderTreinamentos;
+filtroData.onchange = renderTreinamentos;
+
+renderTreinamentos();
+</script>
+
+</body>
+</html>

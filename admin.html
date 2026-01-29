@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administração EXÉRCITO</title>
+
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Mantém o visual geral do seu site e só deixa o painel “mais bonito” */
+    .panel {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      padding: 14px;
+      backdrop-filter: blur(6px);
+    }
+
+    /* Accordion simples (clicou abre/fecha) */
+    details.panel-group {
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    details.panel-group > summary {
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-weight: 700;
+    }
+    details.panel-group > summary::-webkit-details-marker { display: none; }
+
+    .badge {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .list-wrap {
+      padding: 12px 6px 6px 6px;
+    }
+
+    /* Card “estilo login” */
+    .login-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+
+    .login-card h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+
+    .sug-text {
+      margin: 0;
+      opacity: 0.95;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .muted {
+      opacity: 0.75;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Botões mais bonitos sem quebrar seus .btn-* existentes */
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .06s ease, filter .15s ease;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:hover { filter: brightness(1.05); }
+
+    /* Caso você já use btn-green/btn-red/btn-blue, reaproveita */
+    .btn-green, .btn-red, .btn-blue {
+      border-radius: 10px !important;
+      padding: 10px 12px !important;
+      font-weight: 800 !important;
+    }
+
+    /* Pequena diferença visual para lida */
+    .is-read {
+      opacity: 0.55;
+    }
+  </style>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+      authDomain: "sistema-bope.firebaseapp.com",
+      projectId: "sistema-bope",
+      storageBucket: "sistema-bope.firebasestorage.app",
+      messagingSenderId: "777994155306",
+      appId: "1:777994155306:web:a1c31903c6128a30acda53"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+</head>
+
+<body>
+  <script src="menu-loader.js"></script>
+
+  <main class="container">
+    <h1>Administração EXÉRCITO</h1>
+
+    <div class="panel">
+
+      <!-- 1) SOLICITAÇÕES (clicável abre/fecha) -->
+      <details class="panel-group" open>
+        <summary>
+          <span>Solicitações Pendentes</span>
+          <span class="badge" id="badgePendentes">0</span>
+        </summary>
+        <div class="list-wrap">
+          <div id="listaPendentes"></div>
+        </div>
+      </details>
+
+      <!-- 2) SUGESTÕES (clicável abre/fecha) -->
+      <details class="panel-group">
+        <summary>
+          <span>Sugestões do Portal</span>
+          <span class="badge" id="badgeSugestoes">0</span>
+        </summary>
+        <div class="list-wrap">
+          <div id="listaSugestoes"></div>
+        </div>
+      </details>
+
+    </div>
+  </main>
+
+  <script>
+    // ====== Segurança / acesso ======
+    if (!sessionStorage.getItem("usuario")) {
+      window.location.href = "index.html";
+    }
+    if (sessionStorage.getItem("nivel") !== "comando") {
+      alert("Acesso restrito ao comando.");
+      window.location.href = "dashboard.html";
+    }
+
+    // ====== Pendentes (mantém sua lógica) ======
+    const listaPendentes = document.getElementById("listaPendentes");
+    const badgePendentes = document.getElementById("badgePendentes");
+
+    function renderPendentes(pendentesDocs) {
+      listaPendentes.innerHTML = "";
+      badgePendentes.textContent = pendentesDocs.length;
+
+      if (pendentesDocs.length === 0) {
+        listaPendentes.innerHTML = "<p class='muted'>Nenhuma solicitação pendente.</p>";
+        return;
+      }
+
+      pendentesDocs.forEach(doc => {
+        const p = doc.data();
+
+        const div = document.createElement("div");
+        div.className = "login-card";
+
+        div.innerHTML = `
+          <h3>${p.nome || doc.id}</h3>
+          ${p.id ? `<p class="muted" style="margin:0 0 6px 0;">ID: ${p.id}</p>` : ""}
+          ${p.patente ? `<p class="muted" style="margin:0 0 6px 0;">Patente: ${p.patente}</p>` : ""}
+
+          <div class="actions-row">
+            <button class="btn-green" onclick="aprovar('${doc.id}','${(p.nome || doc.id).replace(/'/g, "\\'")}', 'oficial')">Aprovar Oficial</button>
+            <button class="btn-blue" onclick="aprovar('${doc.id}','${(p.nome || doc.id).replace(/'/g, "\\'")}', 'comando')">Aprovar Comando</button>
+            <button class="btn-red" onclick="recusar('${doc.id}')">Recusar</button>
+          </div>
+        `;
+
+        listaPendentes.appendChild(div);
+      });
+    }
+
+    function buscarPendentes() {
+      db.collection("pendentes").get()
+        .then(snapshot => renderPendentes(snapshot.docs))
+        .catch(err => console.error(err));
+    }
+
+    function aprovar(userKey, displayName, nivel) {
+      const token = Math.random().toString(36).substr(2, 8).toUpperCase();
+
+      db.collection("pendentes").doc(userKey).get().then(docPend => {
+        if (!docPend.exists) return alert("Usuário não encontrado.");
+
+        const data = docPend.data();
+
+        db.collection("whitelist").doc(userKey).set({
+          senha: null,
+          nivel: nivel,
+          patente: data.patente || (nivel === "comando" ? "Major" : "Soldado"),
+          id: data.id || displayName || userKey,
+          token: token,
+          nome: data.nome
+        }).then(() => {
+          db.collection("pendentes").doc(userKey).delete();
+          alert(`Código de ativação de ${displayName}: ${token}`);
+          // Para ativar, use o mesmo usuário (nome) informado no cadastro ou o ID/slug, se necessário.
+          buscarPendentes();
+        });
+      });
+    }
+
+    function recusar(nome) {
+      if (confirm(`Deseja recusar ${nome}?`)) {
+        db.collection("pendentes").doc(nome).delete()
+          .then(buscarPendentes);
+      }
+    }
+
+    // ====== Sugestões (simples: "Sugestão 1", texto + botões) ======
+    const listaSugestoes = document.getElementById("listaSugestoes");
+    const badgeSugestoes = document.getElementById("badgeSugestoes");
+
+    // Helper: ordena por data desc (quando existir)
+    function sortByDateDesc(arr) {
+      return arr.sort((a,b) => {
+        const da = a.data && a.data.toDate ? a.data.toDate().getTime() : 0;
+        const dbb = b.data && b.data.toDate ? b.data.toDate().getTime() : 0;
+        return dbb - da;
+      });
+    }
+
+    function renderSugestoes(items) {
+      listaSugestoes.innerHTML = "";
+      badgeSugestoes.textContent = items.length;
+
+      if (items.length === 0) {
+        listaSugestoes.innerHTML = "<p class='muted'>Nenhuma sugestão enviada.</p>";
+        return;
+      }
+
+      // Ordena cliente-side (não quebra se não tiver data)
+      const ordenadas = sortByDateDesc(items);
+
+      ordenadas.forEach((s, idx) => {
+        const texto = (s.texto && String(s.texto).trim()) ? s.texto : "";
+        if (!texto) return; // se quiser “tirar” campos com "-" / vazio
+
+        const div = document.createElement("div");
+        div.className = "login-card" + (s.lida ? " is-read" : "");
+
+        div.innerHTML = `
+          <h3>Sugestão ${idx + 1}</h3>
+          <p class="sug-text">${texto}</p>
+
+          <div class="actions-row">
+            ${s.lida
+              ? `<button class="btn-blue" disabled style="opacity:.7; cursor:not-allowed;">Já lida</button>`
+              : `<button class="btn-green" onclick="marcarLida('${s.id}')">Marcar como lida</button>`
+            }
+            <button class="btn-red" onclick="excluirSugestao('${s.id}')">Excluir</button>
+          </div>
+        `;
+
+        listaSugestoes.appendChild(div);
+      });
+    }
+
+    // Listener REALTIME sem depender de orderBy (mais robusto)
+    db.collection("sugestoes").onSnapshot(
+      (snapshot) => {
+        const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderSugestoes(items);
+      },
+      (err) => {
+        console.error(err);
+        listaSugestoes.innerHTML = "<p class='muted'>Erro ao carregar sugestões (ver console).</p>";
+      }
+    );
+
+    function marcarLida(id) {
+      db.collection("sugestoes").doc(id).update({ lida: true })
+        .catch(err => {
+          console.error(err);
+          alert("Não foi possível marcar como lida.");
+        });
+    }
+
+    function excluirSugestao(id) {
+      if (!confirm("Deseja excluir esta sugestão?")) return;
+      db.collection("sugestoes").doc(id).delete()
+        .catch(err => {
+          console.error(err);
+          alert("Não foi possível excluir.");
+        });
+    }
+
+    // Logout (se existir no menu)
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.onclick = () => {
+        sessionStorage.clear();
+        window.location.href = "index.html";
+      };
+    }
+
+    buscarPendentes();
+  </script>
+</body>
+</html>

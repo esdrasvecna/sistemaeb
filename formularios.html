@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Formulários - EXÉRCITO</title>
+
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Mantém o padrão visual do portal (cards/hero/grid) */
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px 14px 40px;
+    }
+
+    .hero {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 18px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+    }
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero p { margin: 8px 0 0; opacity: .82; line-height: 1.35; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-weight: 900;
+      font-size: 12px;
+      opacity: .95;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .col-12 { grid-column: span 12; }
+    .col-5  { grid-column: span 5; }
+    .col-7  { grid-column: span 7; }
+    @media (max-width: 900px) {
+      .col-5, .col-7 { grid-column: span 12; }
+    }
+
+    .card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(6px);
+    }
+
+    .login-card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+    }
+
+    .section-title {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      font-weight: 900;
+      opacity: .95;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .muted { opacity: .75; font-size: 12px; line-height: 1.35; }
+
+    /* Form escopado */
+    .page input, .page textarea, .page button, .page select {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      outline: none;
+      box-sizing: border-box;
+      transition: filter .16s ease, transform .16s ease;
+    }
+    .page input:focus, .page textarea:focus, .page select:focus {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+    .page textarea { min-height: 110px; resize: vertical; }
+
+    nav.menu #logoutBtn {
+      width: auto !important;
+      padding: 8px 12px !important;
+      border-radius: 10px !important;
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 560px) {
+      .row-2 { grid-template-columns: 1fr; }
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .btn-row > * {
+      flex: 1;
+      min-width: 160px;
+    }
+
+    .chip {
+      font-size: 12px;
+      font-weight: 900;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      white-space: nowrap;
+      opacity: .95;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chip.ok {
+      background: rgba(46, 204, 113, 0.22);
+      border-color: rgba(46, 204, 113, 0.35);
+    }
+    .chip.warn {
+      background: rgba(241, 196, 15, 0.22);
+      border-color: rgba(241, 196, 15, 0.35);
+    }
+
+    /* Accordion / painel */
+    .accordion {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .acc-item {
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      overflow: hidden;
+    }
+    .acc-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .acc-title {
+      font-weight: 900;
+      min-width: 0;
+    }
+    .acc-desc {
+      margin-top: 6px;
+      font-size: 12px;
+      opacity: .75;
+      line-height: 1.35;
+    }
+    .acc-body {
+      display: none;
+      padding: 12px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.18);
+    }
+    .acc-body.show { display: block; }
+
+    .mini {
+      font-size: 12px;
+      opacity: .78;
+    }
+
+    .answers {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .answer-card {
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+    }
+    .kv {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 8px 12px;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    @media (max-width: 650px) {
+      .kv { grid-template-columns: 1fr; }
+    }
+    .kv b { opacity: .95; }
+
+    .notice {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      font-size: 12px;
+      opacity: .9;
+      display: none;
+    }
+    .notice.show { display: block; }
+  </style>
+
+  <script>
+    const firebaseConfig = {"apiKey": "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M", "authDomain": "sistema-bope.firebaseapp.com", "projectId": "sistema-bope", "storageBucket": "sistema-bope.firebasestorage.app", "messagingSenderId": "777994155306", "appId": "1:777994155306:web:a1c31903c6128a30acda53"};
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+</head>
+
+<body>
+  <script src="menu-loader.js"></script>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>🪂 Formulários</h1>
+          <p>Área exclusiva para <b>PARAQUEDISTA</b>. Você pode preencher formulários abertos. Quem é <b>COMANDO</b> pode criar e finalizar.</p>
+        </div>
+        <div class="pill" id="userPill">Carregando...</div>
+      </div>
+    </section>
+
+    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <div class="chip">Guarnição (Cargo)</div>
+      <select id="filtroCargo" style="max-width:360px;">
+        <option value="__MEU__">Meu cargo</option>
+
+        <optgroup label="Praças">
+          <option value="Recruta">Recruta</option>
+          <option value="Soldado">Soldado</option>
+          <option value="Cabo">Cabo</option>
+          <option value="3º Sargento">3º Sargento</option>
+          <option value="2º Sargento">2º Sargento</option>
+          <option value="1º Sargento">1º Sargento</option>
+          <option value="Subtenente">Subtenente</option>
+        </optgroup>
+        <optgroup label="Oficiais">
+          <option value="Aspirante">Aspirante</option>
+          <option value="2º Tenente">2º Tenente</option>
+          <option value="1º Tenente">1º Tenente</option>
+          <option value="Capitão">Capitão</option>
+          <option value="Major">Major</option>
+          <option value="Tenente-Coronel">Tenente-Coronel</option>
+          <option value="Coronel">Coronel</option>
+        </optgroup>
+        <option value="__TODOS__">Todos (comando)</option>
+      </select>
+    </div>
+
+
+    <section class="grid">
+      <div class="col-5 card" id="builderBlock" style="display:none;">
+        <div class="section-title">
+          <span>➕ Criar formulário</span>
+          <span class="chip warn">Somente comando</span>
+        </div>
+
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <label class="muted">Título</label>
+          <input id="formTitulo" placeholder="Ex: Check-in do salto / Presença / Relatório" />
+
+          <label class="muted">Descrição (opcional)</label>
+          <textarea id="formDescricao" placeholder="Instruções rápidas para a equipe..."></textarea>
+
+          
+
+          <label class="muted">Cargo alvo do formulário</label>
+          
+<select id="formAlvoCargo">
+  <option value="">Todos (geral)</option>
+  <optgroup label="Praças">
+  <option value="Recruta">Recruta</option>
+  <option value="Soldado">Soldado</option>
+  <option value="Cabo">Cabo</option>
+  <option value="3º Sargento">3º Sargento</option>
+  <option value="2º Sargento">2º Sargento</option>
+  <option value="1º Sargento">1º Sargento</option>
+  <option value="Subtenente">Subtenente</option>
+</optgroup>
+<optgroup label="Oficiais">
+  <option value="Aspirante">Aspirante</option>
+  <option value="2º Tenente">2º Tenente</option>
+  <option value="1º Tenente">1º Tenente</option>
+  <option value="Capitão">Capitão</option>
+  <option value="Major">Major</option>
+  <option value="Tenente-Coronel">Tenente-Coronel</option>
+  <option value="Coronel">Coronel</option>
+</optgroup></select>
+
+<div class="section-title" style="margin-top:12px;">
+            <span>Campos do formulário</span>
+            <span class="chip" id="camposCount">0 campo(s)</span>
+          </div>
+
+          <div class="row-2">
+            <div>
+              <label class="muted">Nome do campo</label>
+              <input id="campoLabel" placeholder="Ex: Nome de guerra" />
+            </div>
+            <div>
+              <label class="muted">Tipo</label>
+              <select id="campoTipo">
+                <option value="texto">Texto</option>
+                <option value="numero">Número</option>
+                <option value="data">Data</option>
+                <option value="simnao">Sim/Não</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row-2" style="margin-top:10px;">
+            <div>
+              <label class="muted">Obrigatório?</label>
+              <select id="campoReq">
+                <option value="true">Sim</option>
+                <option value="false">Não</option>
+              </select>
+            </div>
+            <div class="btn-row" style="margin-top:22px;">
+              <button type="button" id="btnAddCampo">Adicionar campo</button>
+            </div>
+          </div>
+
+          <div class="notice" id="builderNotice"></div>
+
+          <div id="camposPreview" class="answers" style="margin-top:10px;"></div>
+
+          <div class="btn-row" style="margin-top:12px;">
+            <button type="button" class="btn-red" id="btnCriarForm">Publicar formulário</button>
+            <button type="button" id="btnLimparForm">Limpar</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px;">
+            Ao publicar, o formulário fica <b>ABERTO</b> para preenchimento. Depois você pode <b>FINALIZAR</b> (fechar) para não aceitar mais respostas.
+          </div>
+        </div>
+      </div>
+
+      <div class="col-7 card">
+        <div class="section-title">
+          <span>🗂️ Formulários</span>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <span class="chip ok" id="openCount">Abertos: 0</span>
+            <span class="chip" id="closedCount">Fechados: 0</span>
+            <button id="btnRecarregar" type="button" style="width:auto;">Recarregar</button>
+          </div>
+        </div>
+
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <div class="accordion" id="formsList">
+            <div class="muted">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 card">
+        <div class="section-title">
+          <span>🧾 Minhas respostas</span>
+          <span class="chip" id="myCount">0</span>
+        </div>
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <div class="accordion" id="myAnswers">
+            <div class="muted">Carregando...</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ===== Guard =====
+    const usuario = sessionStorage.getItem("usuario");
+    const nivel = (sessionStorage.getItem("nivel") || "").toLowerCase();
+    const patente = (sessionStorage.getItem("patente") || "").toLowerCase();
+    const cargo = (sessionStorage.getItem("cargo") || "").toLowerCase();
+    const isComando = nivel === "comando";
+    const cargosPermitidos = ["paraquedista","infantaria","polícia do exército","policia do exercito","forças especiais","forcas especiais","cavalaria mecanizada","bavex"];
+    const meuCargo = (cargo || "").toLowerCase().trim();
+    const isCargoPermitido = cargosPermitidos.includes(meuCargo);
+
+    if (!usuario) window.location.href = "index.html";
+    if (!(isComando || isCargoPermitido)) {
+      alert("Acesso restrito por guarnição/cargo.");
+      window.location.href = "portal.html";
+    }
+
+    document.getElementById("userPill").textContent = `👤 ${usuario} • ${isComando ? "COMANDO" : (cargo || "USUÁRIO")}`;
+
+    // Builder só comando
+    const builderBlock = document.getElementById("builderBlock");
+    if (isComando) builderBlock.style.display = "block";
+    // Filtro (guarnição = cargo)
+    const filtroCargoSel = document.getElementById("filtroCargo");
+    if (filtroCargoSel) {
+      if (!isComando) {
+        // remove "Todas" e trava o filtro
+        const optTodos = Array.from(filtroCargoSel.options).find(o => o.value === "__TODOS__");
+        if (optTodos) optTodos.remove();
+        filtroCargoSel.value = "__MEU__";
+        filtroCargoSel.disabled = true;
+        filtroCargoSel.title = "Filtro definido pelo seu cargo.";
+      } else {
+        filtroCargoSel.value = "__MEU__";
+      }
+      filtroCargoSel.addEventListener("change", () => loadForms());
+    }
+
+    // Builder: pré-seleciona o cargo do usuário
+    const formAlvo = document.getElementById("formAlvoCargo");
+    if (formAlvo && cargo) {
+      const c = cargo.toLowerCase().trim();
+      const opt = Array.from(formAlvo.options).find(o => o.value.toLowerCase().trim() === c);
+      if (opt) formAlvo.value = opt.value;
+    }
+
+
+    // ===== Helpers =====
+    const $ = (id) => document.getElementById(id);
+    function escapeHtml(str) {
+      return (str || "").toString()
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+    function showNotice(el, msg) {
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 3500);
+    }
+    function ts() {
+      return firebase.firestore.FieldValue.serverTimestamp();
+    }
+
+    // ===== Form Builder =====
+    let campos = [];
+    const camposCount = $("camposCount");
+    const camposPreview = $("camposPreview");
+    const builderNotice = $("builderNotice");
+
+    function renderCamposPreview() {
+      camposCount.textContent = `${campos.length} campo(s)`;
+      if (!campos.length) {
+        camposPreview.innerHTML = `<div class="muted">Nenhum campo adicionado ainda.</div>`;
+        return;
+      }
+      camposPreview.innerHTML = campos.map((c, i) => `
+        <div class="answer-card" style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div style="min-width:0;">
+            <b>${escapeHtml(c.label)}</b>
+            <div class="mini">Tipo: ${escapeHtml(c.tipo)} • ${c.required ? "Obrigatório" : "Opcional"}</div>
+          </div>
+          <button type="button" style="width:auto;" onclick="window.__removeCampo(${i})">Remover</button>
+        </div>
+      `).join("");
+    }
+
+    window.__removeCampo = (idx) => {
+      campos.splice(idx, 1);
+      renderCamposPreview();
+    };
+
+    if (isComando) {
+      $("btnAddCampo").addEventListener("click", () => {
+        const label = $("campoLabel").value.trim();
+        const tipo = $("campoTipo").value;
+        const required = $("campoReq").value === "true";
+
+        if (!label) return showNotice(builderNotice, "Informe o nome do campo.");
+
+        if (campos.some(c => c.label.toLowerCase() === label.toLowerCase())) {
+          return showNotice(builderNotice, "Já existe um campo com esse nome.");
+        }
+
+        campos.push({ label, tipo, required });
+        $("campoLabel").value = "";
+        renderCamposPreview();
+      });
+
+      $("btnLimparForm").addEventListener("click", () => {
+        $("formTitulo").value = "";
+        $("formDescricao").value = "";
+        campos = [];
+        renderCamposPreview();
+      });
+
+      $("btnCriarForm").addEventListener("click", async () => {
+        const titulo = $("formTitulo").value.trim();
+        const descricao = $("formDescricao").value.trim();
+
+        if (!titulo) return showNotice(builderNotice, "Informe o título do formulário.");
+        if (!campos.length) return showNotice(builderNotice, "Adicione pelo menos 1 campo.");
+
+        try {
+          await db.collection("formularios").add({
+            titulo,
+            descricao,
+            campos,
+            aberto: true,
+            criadoPor: usuario,
+            criadoEm: ts(),
+            atualizadoEm: ts(),
+            alvoCargo: (document.getElementById("formAlvoCargo").value || "").toLowerCase().trim()
+          });
+          showNotice(builderNotice, "✅ Formulário publicado.");
+          $("btnLimparForm").click();
+        } catch (e) {
+          console.error(e);
+          showNotice(builderNotice, "❌ Erro ao publicar. Veja o console.");
+        }
+      });
+    }
+
+    // ===== Render forms =====
+    const formsList = $("formsList");
+    const openCount = $("openCount");
+    const closedCount = $("closedCount");
+
+    function accToggle(_, bodyId) {
+      const body = document.getElementById(bodyId);
+      body.classList.toggle("show");
+    }
+    window.accToggle = accToggle;
+
+    function renderFormAcc(form, id, respostasCount=0) {
+      const statusChip = form.aberto ? `<span class="chip ok">ABERTO</span>` : `<span class="chip">FECHADO</span>`;
+      const countChip = `<span class="chip">${respostasCount} resp.</span>`;
+
+      const head = `
+        <div class="acc-head" onclick="accToggle('h_${id}','b_${id}')">
+          <div style="min-width:0;">
+            <div class="acc-title">🪂 ${escapeHtml(form.titulo || "Formulário")}</div>
+            <div class="acc-desc">${escapeHtml(form.descricao || "")}</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+            ${statusChip}
+            ${countChip}
+            ${isComando ? `<span class="chip warn">ADM</span>` : ``}
+          </div>
+        </div>
+      `;
+
+      let bodyHtml = "";
+      if (form.aberto) {
+        const fields = (form.campos || []).map((c, idx) => {
+          const reqMark = c.required ? " *" : "";
+          const key = `f_${id}_${idx}`;
+          let input = "";
+          if (c.tipo === "numero") {
+            input = `<input id="${key}" type="number" placeholder="${escapeHtml(c.label)}">`;
+          } else if (c.tipo === "data") {
+            input = `<input id="${key}" type="date">`;
+          } else if (c.tipo === "simnao") {
+            input = `
+              <select id="${key}">
+                <option value="">Selecione</option>
+                <option value="Sim">Sim</option>
+                <option value="Não">Não</option>
+              </select>
+            `;
+          } else {
+            input = `<input id="${key}" type="text" placeholder="${escapeHtml(c.label)}">`;
+          }
+          return `
+            <label class="muted">${escapeHtml(c.label)}${reqMark}</label>
+            ${input}
+          `;
+        }).join("");
+
+        bodyHtml = `
+          <div class="mini muted">Preencha e envie. (Este formulário está aberto.)</div>
+          <div class="notice" id="notice_${id}"></div>
+          <div style="margin-top:10px;">${fields}</div>
+          <div class="btn-row" style="margin-top:12px;">
+            <button type="button" class="btn-red" onclick="window.__enviarResposta('${id}')">Enviar</button>
+            ${isComando ? `<button type="button" onclick="window.__fecharForm('${id}')">Finalizar (fechar)</button>` : ``}
+          </div>
+        `;
+      } else {
+        bodyHtml = `
+          <div class="mini muted">Formulário finalizado. Respostas foram salvas.</div>
+          <div id="closedPanel_${id}" style="margin-top:10px;"></div>
+          ${isComando ? `<div class="btn-row" style="margin-top:12px;">
+              <button type="button" onclick="window.__abrirRespostas('${id}')">Ver respostas</button>
+              <button type="button" onclick="window.__reabrirForm('${id}')">Reabrir</button>
+            </div>` : `<div class="btn-row" style="margin-top:12px;">
+              <button type="button" onclick="window.__verMinhaResposta('${id}')">Ver minha resposta</button>
+            </div>`}
+        `;
+      }
+
+      return `
+        <div class="acc-item">
+          ${head}
+          <div class="acc-body" id="b_${id}">
+            ${bodyHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    window.__enviarResposta = async (formId) => {
+      try {
+        const formRef = db.collection("formularios").doc(formId);
+        const formSnap = await formRef.get();
+        if (!formSnap.exists) return;
+
+        const form = formSnap.data();
+        if (!form.aberto) return;
+
+        const respostas = {};
+        const camposLocal = form.campos || [];
+        for (let i=0; i<camposLocal.length; i++) {
+          const key = `f_${formId}_${i}`;
+          const v = (document.getElementById(key)?.value || "").trim();
+          if (camposLocal[i].required && !v) {
+            const n = document.getElementById(`notice_${formId}`);
+            if (n) showNotice(n, `Preencha o campo obrigatório: ${camposLocal[i].label}`);
+            return;
+          }
+          respostas[camposLocal[i].label] = v;
+        }
+
+        await db.collection("formularios_respostas").add({
+          formId,
+          usuario,
+          nivel,
+          patente: sessionStorage.getItem("patente") || "",
+          cargo: sessionStorage.getItem("cargo") || "",
+          respostas,
+          createdAt: ts()
+        });
+
+        const n = document.getElementById(`notice_${formId}`);
+        if (n) showNotice(n, "✅ Resposta enviada.");
+        loadMyAnswers();
+      } catch (e) {
+        console.error(e);
+        const n = document.getElementById(`notice_${formId}`);
+        if (n) showNotice(n, "❌ Erro ao enviar.");
+      }
+    };
+
+    window.__fecharForm = async (formId) => {
+      if (!confirm("Finalizar (fechar) este formulário?")) return;
+      try {
+        await db.collection("formularios").doc(formId).update({
+          aberto: false,
+          fechadoEm: ts(),
+          atualizadoEm: ts(),
+          fechadoPor: usuario
+        });
+      } catch (e) {
+        console.error(e);
+        alert("Erro ao fechar.");
+      }
+    };
+
+    window.__reabrirForm = async (formId) => {
+      if (!confirm("Reabrir este formulário?")) return;
+      try {
+        await db.collection("formularios").doc(formId).update({
+          aberto: true,
+          atualizadoEm: ts()
+        });
+      } catch (e) {
+        console.error(e);
+        alert("Erro ao reabrir.");
+      }
+    };
+
+    window.__abrirRespostas = async (formId) => {
+      const panel = document.getElementById(`closedPanel_${formId}`);
+      if (!panel) return;
+
+      panel.innerHTML = `<div class="muted">Carregando respostas...</div>`;
+      try {
+        const snap = await db.collection("formularios_respostas").where("formId", "==", formId).get();
+        if (snap.empty) {
+          panel.innerHTML = `<div class="muted">Nenhuma resposta registrada.</div>`;
+          return;
+        }
+        const cards = [];
+        snap.forEach(d => {
+          const r = d.data() || {};
+          const respostas = r.respostas || {};
+          const rows = Object.keys(respostas).map(k => `
+            <div class="kv">
+              <b>${escapeHtml(k)}</b>
+              <div>${escapeHtml(respostas[k])}</div>
+            </div>
+          `).join("");
+
+          cards.push(`
+            <div class="answer-card">
+              <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:space-between; align-items:center;">
+                <b>👤 ${escapeHtml(r.usuario || "")}</b>
+                <span class="chip">${escapeHtml((r.patente || r.cargo || "PQD"))}</span>
+              </div>
+              ${rows}
+            </div>
+          `);
+        });
+        panel.innerHTML = `<div class="answers">${cards.join("")}</div>`;
+      } catch (e) {
+        console.error(e);
+        panel.innerHTML = `<div class="muted">Erro ao carregar respostas.</div>`;
+      }
+    };
+
+    window.__verMinhaResposta = async (formId) => {
+      const panel = document.getElementById(`closedPanel_${formId}`);
+      if (!panel) return;
+      panel.innerHTML = `<div class="muted">Carregando sua resposta...</div>`;
+      try {
+        const snap = await db.collection("formularios_respostas")
+          .where("formId", "==", formId)
+          .where("usuario", "==", usuario)
+          .get();
+
+        if (snap.empty) {
+          panel.innerHTML = `<div class="muted">Você não respondeu este formulário.</div>`;
+          return;
+        }
+
+        const first = snap.docs[0].data() || {};
+        const respostas = first.respostas || {};
+        const rows = Object.keys(respostas).map(k => `
+          <div class="kv">
+            <b>${escapeHtml(k)}</b>
+            <div>${escapeHtml(respostas[k])}</div>
+          </div>
+        `).join("");
+
+        panel.innerHTML = `<div class="answer-card"><b>✅ Sua resposta</b>${rows}</div>`;
+      } catch (e) {
+        console.error(e);
+        panel.innerHTML = `<div class="muted">Erro ao carregar.</div>`;
+      }
+    };
+
+    function loadForms() {
+
+      const sel = document.getElementById("filtroCargo");
+      let selected = sel ? sel.value : "__MEU__";
+
+      // comando pode escolher; usuário comum fica no próprio cargo
+      if (!isComando) selected = "__MEU__";
+
+      let filtroCargo = (cargo || "").trim();
+      if (selected === "__TODOS__") filtroCargo = "__TODOS__";
+      else if (selected !== "__MEU__") filtroCargo = selected;
+
+      // normaliza
+      let filtroLower = (filtroCargo || "").toLowerCase().trim();
+
+      // Se usuário não tem cargo definido, mostra todos
+      if (!filtroLower) filtroLower = "__todos__";
+
+      if (window._unsubForms) { try { window._unsubForms(); } catch(e) {} }
+
+      window._unsubForms = db.collection("formularios").onSnapshot(async (snap) => {
+        const all = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
+
+        const normAlvo = (f) => {
+          const alvo = (f.alvoCargo || "").toString().trim();
+          if (!alvo) return "__geral__"; // legacy: formulários antigos valem para todos
+          return alvo.toLowerCase().trim();
+        };
+
+        const filtrados = all.filter(form => {
+          if (filtroLower === "__todos__") return true;
+          const alvo = normAlvo(form);
+          return (alvo === "__geral__") || (alvo === filtroLower);
+        });
+
+        if (!filtrados.length) {
+          formsList.innerHTML = `<div class="muted">Nenhum formulário para este cargo.</div>`;
+          openCount.textContent = "Abertos: 0";
+          closedCount.textContent = "Fechados: 0";
+          return;
+        }
+
+        const abertos = filtrados.filter(f => f.aberto);
+        const fechados = filtrados.filter(f => !f.aberto);
+
+        openCount.textContent = `Abertos: ${abertos.length}`;
+        closedCount.textContent = `Fechados: ${fechados.length}`;
+
+        formsList.innerHTML = "";
+        const ordenar = (a,b) => {
+          const ta = a.atualizadoEm?.seconds || a.criadoEm?.seconds || 0;
+          const tb = b.atualizadoEm?.seconds || b.criadoEm?.seconds || 0;
+          return tb - ta;
+        };
+
+        // Render na mesma ordem/visual de antes
+        for (const form of abertos.sort(ordenar)) {
+          formsList.appendChild(await renderFormCard(form));
+        }
+        if (fechados.length) {
+          const sep = document.createElement("div");
+          sep.className = "section-title";
+          sep.style.marginTop = "14px";
+          sep.innerHTML = `<span>Formulários finalizados</span><span class="chip">${fechados.length}</span>`;
+          formsList.appendChild(sep);
+          for (const form of fechados.sort(ordenar)) {
+            formsList.appendChild(await renderFormCard(form));
+          }
+        }
+      });
+
+}
+
+    const myAnswers = $("myAnswers");
+    const myCount = $("myCount");
+
+    async function loadMyAnswers() {
+      myAnswers.innerHTML = `<div class="muted">Carregando...</div>`;
+      try {
+        const snap = await db.collection("formularios_respostas").where("usuario","==",usuario).get();
+        myCount.textContent = snap.size;
+
+        if (snap.empty) {
+          myAnswers.innerHTML = `<div class="muted">Você ainda não enviou respostas.</div>`;
+          return;
+        }
+
+        const byForm = {};
+        snap.forEach(d => {
+          const r = d.data() || {};
+          byForm[r.formId] = byForm[r.formId] || [];
+          byForm[r.formId].push(r);
+        });
+
+        const items = [];
+        for (const formId of Object.keys(byForm)) {
+          let titulo = "Formulário";
+          try {
+            const fs = await db.collection("formularios").doc(formId).get();
+            if (fs.exists) titulo = fs.data().titulo || titulo;
+          } catch(e) {}
+
+          const rid = `my_${formId}`;
+          items.push(`
+            <div class="acc-item">
+              <div class="acc-head" onclick="accToggle('h_${rid}','b_${rid}')">
+                <div style="min-width:0;">
+                  <div class="acc-title">📝 ${escapeHtml(titulo)}</div>
+                  <div class="acc-desc">${byForm[formId].length} envio(s)</div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <span class="chip">${byForm[formId].length} resp.</span>
+                </div>
+              </div>
+              <div class="acc-body" id="b_${rid}">
+                <div class="answers">
+                  ${byForm[formId].map(r => {
+                    const respostas = r.respostas || {};
+                    const rows = Object.keys(respostas).map(k => `
+                      <div class="kv">
+                        <b>${escapeHtml(k)}</b>
+                        <div>${escapeHtml(respostas[k])}</div>
+                      </div>
+                    `).join("");
+                    return `<div class="answer-card"><b>📌 Envio</b>${rows}</div>`;
+                  }).join("")}
+                </div>
+              </div>
+            </div>
+          `);
+        }
+
+        myAnswers.innerHTML = items.join("");
+      } catch(e) {
+        console.error(e);
+        myAnswers.innerHTML = `<div class="muted">Erro ao carregar suas respostas.</div>`;
+      }
+    }
+
+    $("btnRecarregar").addEventListener("click", () => {
+      loadMyAnswers();
+    });
+
+    if (isComando) renderCamposPreview();
+    loadForms();
+    loadMyAnswers();
+  </script>
+</body>
+</html>

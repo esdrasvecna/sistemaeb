@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Início - EXÉRCITO</title>
+
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase compat (mesmo padrão do resto do projeto) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Página principal mais bonita (sem sair do padrão escuro do site) */
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px 14px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Fundo animado sutil */
+    .bg-orbs {
+      position: absolute;
+      inset: -120px -120px auto -120px;
+      height: 520px;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(18px);
+      opacity: .55;
+    }
+    .orb {
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      animation: float 9s ease-in-out infinite;
+      will-change: transform;
+    }
+    .orb:nth-child(1){ left: 0; top: 60px; animation-delay: 0s; }
+    .orb:nth-child(2){ left: 220px; top: 10px; width: 280px; height: 280px; animation-delay: 1.2s; }
+    .orb:nth-child(3){ right: 40px; top: 80px; width: 260px; height: 260px; animation-delay: 2.4s; }
+
+    @keyframes float {
+      0%,100% { transform: translate3d(0,0,0) }
+      50% { transform: translate3d(0,-16px,0) }
+    }
+
+    .hero {
+      position: relative;
+      z-index: 1;
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 18px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .hero:hover { transform: translateY(-2px); box-shadow: 0 22px 55px rgba(0,0,0,0.40); }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero p { margin: 8px 0 0; opacity: .82; line-height: 1.35; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-weight: 900;
+      font-size: 12px;
+      opacity: .95;
+      white-space: nowrap;
+    }
+
+    .grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(6px);
+    }
+
+    /* Cards “estilo login” (mais bonitos) */
+    .login-card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .login-card:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat {
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .stat:hover { transform: translateY(-2px); filter: brightness(1.03); }
+    .stat .label { opacity: .75; font-size: 12px; }
+    .stat .value { margin-top: 6px; font-size: 18px; font-weight: 900; }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.20);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .action:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .action .left { min-width: 0; }
+    .action .title { font-weight: 900; margin: 0; }
+    .action .desc { margin: 6px 0 0; opacity: .78; font-size: 12px; line-height: 1.35; }
+
+    .chip {
+      font-size: 12px;
+      font-weight: 900;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      white-space: nowrap;
+      opacity: .95;
+    }
+
+    .section-title {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      font-weight: 900;
+      opacity: .95;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .muted { opacity: .75; font-size: 12px; line-height: 1.35; }
+
+    /* Notícia: Oficiais ao vivo (mesmo padrão do portal) */
+    .news-list { display: flex; flex-direction: column; gap: 10px; }
+    .news-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .news-item:hover { transform: translateY(-2px); filter: brightness(1.03); }
+    .news-left { min-width: 0; }
+    .news-title { font-weight: 900; margin: 0; }
+    .news-sub { margin-top: 6px; opacity: .75; font-size: 12px; line-height: 1.35; }
+    .news-chip {
+      font-size: 12px;
+      font-weight: 900;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      white-space: nowrap;
+      opacity: .95;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .news-chip.live {
+      background: rgba(46, 204, 113, 0.22);
+      border-color: rgba(46, 204, 113, 0.35);
+    }
+    .news-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .news-actions a { text-decoration: none; }
+
+    /* Form (escopado pra não ferrar o menu/logout) */
+    .page input, .page textarea, .page button, .page select {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      outline: none;
+      box-sizing: border-box;
+      transition: filter .16s ease, transform .16s ease;
+    }
+    .page input:focus, .page textarea:focus, .page select:focus {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+    .page textarea { min-height: 110px; resize: vertical; }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .btn-row > * { flex: 1; min-width: 180px; }
+
+    /* Garante que logout do menu não fique gigante */
+    nav.menu #logoutBtn {
+      width: auto !important;
+      padding: 8px 12px !important;
+      border-radius: 10px !important;
+    }
+
+    /* Layout grid responsivo */
+    .col-12 { grid-column: span 12; }
+    .col-8  { grid-column: span 8; }
+    .col-6  { grid-column: span 6; }
+    .col-4  { grid-column: span 4; }
+
+    @media (max-width: 980px) {
+      .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 780px) {
+      .col-8, .col-6, .col-4 { grid-column: span 12; }
+      .quick-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+      authDomain: "sistema-bope.firebaseapp.com",
+      projectId: "sistema-bope",
+      storageBucket: "sistema-bope.firebasestorage.app",
+      messagingSenderId: "777994155306",
+      appId: "1:777994155306:web:a1c31903c6128a30acda53"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+</head>
+
+<body>
+  <!-- Menu do sistema -->
+  <script src="menu-loader.js"></script>
+
+  <main class="page">
+    <div class="bg-orbs">
+      <div class="orb"></div>
+      <div class="orb"></div>
+      <div class="orb"></div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>🛡️ Centro de Comando</h1>
+          <p>Atalhos rápidos, status do sistema e envio de sugestões — tudo num só lugar.</p>
+        </div>
+
+        <div class="pill" id="userPill">Carregando...</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <!-- STATUS -->
+      <div class="col-12 card">
+        <div class="section-title">
+          <span>📊 Status do Sistema</span>
+          <span class="chip" id="lastUpdate">Ao vivo</span>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat">
+            <div class="label">Operações registradas</div>
+            <div class="value" id="statOperacoes">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Treinamentos</div>
+            <div class="value" id="statTreinos">—</div>
+          </div>
+          <div class="stat">
+            <div class="label">Sugestões (não lidas)</div>
+            <div class="value" id="statSugNaoLidas">—</div>
+          </div>
+          <div class="stat" id="statPendWrap" style="display:none;">
+            <div class="label">Solicitações pendentes</div>
+            <div class="value" id="statPendentes">—</div>
+          </div>
+        </div>
+        <div class="muted" style="margin-top:10px;">
+          Dica: mantenha o sistema organizado. Sugestões ajudam a melhorar o fluxo da equipe.
+        </div>
+      </div>
+
+      <!-- NOTÍCIA FIXA: OFICIAIS AO VIVO -->
+      <div class="col-12 card" id="newsBlock">
+        <div class="section-title">
+          <span>📰 Notícias</span>
+          <span class="chip" id="liveBadge">Verificando...</span>
+        </div>
+
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <div class="news-list" id="liveNewsList">
+            <div class="muted">Carregando...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATALHOS -->
+      <div class="col-8 card">
+        <div class="section-title">
+          <span>⚡ Ações rápidas</span>
+          <span class="muted">Acesso em 1 clique</span>
+        </div>
+
+        <div class="quick-actions" id="actionsWrap">
+          <!-- preenchido via JS conforme permissões -->
+        </div>
+      </div>
+
+      <!-- BOAS PRÁTICAS / BLOCOS -->
+      <div class="col-4 card">
+        <div class="section-title">
+          <span>✅ Checklist</span>
+          <span class="chip">Rotina</span>
+        </div>
+
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <div class="muted" style="margin-bottom:10px;">
+            Use isso como “mini-guia” no dia a dia:
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div class="login-card" style="padding:12px;">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+              <strong>Relatórios</strong>
+              <div class="muted">Registre operações com dados completos.</div>
+            </div>
+            <div class="login-card" style="padding:12px;">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+              <strong>Treinamentos</strong>
+              <div class="muted">Cadastre com data/horário e instrutor marcado.</div>
+            </div>
+            <div class="login-card" style="padding:12px;">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+              <strong>Sugestões</strong>
+              <div class="muted">Envie melhorias objetivas (o comando lê tudo).</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUGESTÕES -->
+      <div class="col-12 card">
+        <div class="section-title">
+          <span>💡 Enviar sugestão</span>
+          <span class="chip" id="sugChip">Portal</span>
+        </div>
+
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <form id="sugForm">
+            <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px;">
+              <input id="sugUsuario" type="text" placeholder="Usuário" required>
+              <input id="sugCargo" type="text" placeholder="Cargo" required>
+              <textarea id="sugTexto" placeholder="Escreva sua sugestão..." required></textarea>
+            </div>
+
+            <div class="btn-row">
+              <button type="submit" class="btn-green">Enviar Sugestão</button>
+              <button type="button" class="btn-blue" id="limparSug">Limpar</button>
+            </div>
+
+            <div class="muted" id="sugHint" style="margin-top:10px;"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Proteção básica
+    const usuario = sessionStorage.getItem("usuario");
+    const nivel = sessionStorage.getItem("nivel");
+
+    if (!usuario) window.location.href = "index.html";
+
+    // Header pill
+    const userPill = document.getElementById("userPill");
+    userPill.textContent = `👤 ${usuario} • ${nivel ? nivel.toUpperCase() : "USUÁRIO"}`;
+
+    // Atalhos conforme permissões
+    const actionsWrap = document.getElementById("actionsWrap");
+    function addAction(href, title, desc, chip) {
+      const a = document.createElement("a");
+      a.href = href;
+      a.className = "action";
+      a.innerHTML = `
+        <div class="left">
+          <div class="title">${title}</div>
+          <div class="desc">${desc}</div>
+        </div>
+        <span class="chip">${chip}</span>
+      `;
+      actionsWrap.appendChild(a);
+    }
+
+    addAction("dashboard.html", "Relatórios", "Cadastrar e consultar operações registradas.", "Relatório");
+    addAction("ranking-instrutores.html", "Ranking", "Ver o ranking de instrutores e evolução.", "Ranking");
+
+    if (nivel === "comando" || sessionStorage.getItem("instrutor") === "true") {
+      addAction("treinamentos.html", "Treinamentos", "Cadastrar/editar treinamentos e filtrar listas.", "Treino");
+    } else {
+      addAction("treinamentos.html", "Treinamentos", "Consultar a agenda e registros disponíveis.", "Treino");
+    }
+
+    if (nivel === "comando") {
+      addAction("admin.html", "Admin", "Gerenciar solicitações e sugestões do portal.", "Admin");
+      addAction("usuarios.html", "Usuários", "Gerenciar usuários e permissões.", "Comando");
+      addAction("lives.html", "Oficiais ao vivo", "Cadastrar/ativar lives oficiais (Twitch/TikTok).", "Lives");
+    }
+
+    // Stats ao vivo
+    const statOperacoes = document.getElementById("statOperacoes");
+    const statTreinos = document.getElementById("statTreinos");
+    const statSugNaoLidas = document.getElementById("statSugNaoLidas");
+    const statPendentes = document.getElementById("statPendentes");
+    const statPendWrap = document.getElementById("statPendWrap");
+
+    if (nivel === "comando") statPendWrap.style.display = "";
+
+    function safeCountTo(el, n) { el.textContent = (typeof n === "number") ? String(n) : "0"; }
+
+    // Operações
+    db.collection("operacoes").onSnapshot(s => safeCountTo(statOperacoes, s.size), () => safeCountTo(statOperacoes, 0));
+
+    // Treinamentos
+    db.collection("treinamentos").onSnapshot(s => safeCountTo(statTreinos, s.size), () => safeCountTo(statTreinos, 0));
+
+    // Sugestões não lidas
+    db.collection("sugestoes").onSnapshot(snap => {
+      let naoLidas = 0;
+      snap.forEach(d => {
+        const s = d.data() || {};
+        if (!s.lida) naoLidas++;
+      });
+      safeCountTo(statSugNaoLidas, naoLidas);
+    }, () => safeCountTo(statSugNaoLidas, 0));
+
+    // Pendentes (só comando)
+    if (nivel === "comando") {
+      db.collection("pendentes").onSnapshot(s => safeCountTo(statPendentes, s.size), () => safeCountTo(statPendentes, 0));
+    }
+
+    // ===== Notícias: Oficiais ao vivo =====
+    const liveBadge = document.getElementById("liveBadge");
+    const liveNewsList = document.getElementById("liveNewsList");
+
+    function setLiveBadgeState(qtd) {
+      if (!liveBadge) return;
+      if (qtd > 0) {
+        liveBadge.textContent = `AO VIVO: ${qtd}`;
+      } else {
+        liveBadge.textContent = "Nenhuma live";
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || "").toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function renderLivesNews(lives) {
+      if (!liveNewsList) return;
+      setLiveBadgeState(lives.length);
+
+      if (!lives.length) {
+        liveNewsList.innerHTML = `<div class="muted">Sem transmissões no momento. Quando o comando ativar uma live, ela aparece aqui como notícia oficial.</div>`;
+        return;
+      }
+
+      liveNewsList.innerHTML = lives.map(l => {
+        const plat = escapeHtml(l.plataforma || "Outro");
+        const titulo = escapeHtml(l.titulo || "Transmissão");
+        const url = escapeHtml(l.url || "");
+
+        return `
+          <div class="news-item">
+            <div class="news-left">
+              <div class="news-title">📺 ${titulo}</div>
+              <div class="news-sub">${plat} • Oficial ao vivo</div>
+            </div>
+            <div class="news-actions">
+              <span class="news-chip live">AO VIVO</span>
+              <a class="chip" href="${url}" target="_blank" rel="noopener">Assistir</a>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // Atualização ao vivo (sem depender de índice)
+    db.collection("lives").where("ativo", "==", true).onSnapshot(snap => {
+      const lives = [];
+      snap.forEach(d => lives.push(d.data() || {}));
+
+      // Ordena no braço por updatedAt (se existir)
+      lives.sort((a, b) => {
+        const ta = (a.updatedAt && a.updatedAt.seconds) ? a.updatedAt.seconds : 0;
+        const tb = (b.updatedAt && b.updatedAt.seconds) ? b.updatedAt.seconds : 0;
+        return tb - ta;
+      });
+
+      renderLivesNews(lives);
+    }, (err) => {
+      console.error(err);
+      setLiveBadgeState(0);
+      if (liveNewsList) liveNewsList.innerHTML = `<div class="muted">Não foi possível carregar as lives agora.</div>`;
+    });
+
+    // Sugestões: preencher defaults
+    const sugUsuario = document.getElementById("sugUsuario");
+    const sugCargo = document.getElementById("sugCargo");
+    const sugTexto = document.getElementById("sugTexto");
+    const sugHint = document.getElementById("sugHint");
+
+    sugUsuario.value = usuario || "";
+    sugCargo.value = (nivel || "").toString().toUpperCase();
+
+    document.getElementById("limparSug").onclick = () => {
+      sugTexto.value = "";
+      sugHint.textContent = "";
+      sugTexto.focus();
+    };
+
+    // Enviar sugestão (mantém o mesmo formato usado no admin)
+    document.getElementById("sugForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      sugHint.textContent = "Enviando...";
+
+      try {
+        await db.collection("sugestoes").add({
+          usuario: (sugUsuario.value || "").trim(),
+          cargo: (sugCargo.value || "").trim(),
+          texto: (sugTexto.value || "").trim(),
+          lida: false,
+          data: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        sugTexto.value = "";
+        sugHint.textContent = "✅ Sugestão enviada! Obrigado por contribuir.";
+      } catch (err) {
+        console.error(err);
+        sugHint.textContent = "❌ Não foi possível enviar. Veja o console.";
+      }
+    });
+  </script>
+</body>
+</html>

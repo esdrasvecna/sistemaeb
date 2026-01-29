@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oficiais ao Vivo - EXÉRCITO</title>
+
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase compat (mesmo padrão do resto do projeto) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Mantém o visual idêntico ao padrão do site (hero + cards do portal/dashboard) */
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px 14px 40px;
+    }
+
+    .hero {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 18px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .hero h1 { margin: 0; font-size: 22px; letter-spacing: .2px; }
+    .hero p { margin: 8px 0 0; opacity: .82; line-height: 1.35; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-weight: 900;
+      font-size: 12px;
+      opacity: .95;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(6px);
+    }
+
+    .login-card {
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .login-card:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .section-title {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      font-weight: 900;
+      opacity: .95;
+      letter-spacing: .2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .chip {
+      font-size: 12px;
+      font-weight: 900;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      white-space: nowrap;
+      opacity: .95;
+    }
+
+    .chip-live { background: rgba(46, 204, 113, 0.18); border-color: rgba(46, 204, 113, 0.30); }
+    .chip-off { background: rgba(255, 255, 255, 0.06); }
+
+    .muted { opacity: .78; font-size: 12px; line-height: 1.35; }
+
+    /* Escopado na página (não afeta menu/logout) */
+    .page input, .page select, .page button {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      color: #fff;
+      outline: none;
+      box-sizing: border-box;
+      transition: filter .16s ease, transform .16s ease;
+    }
+
+    .page input:focus, .page select:focus {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .btn-row > * { flex: 1; min-width: 160px; }
+
+    /* Garante que logout do menu não fique gigante */
+    nav.menu #logoutBtn {
+      width: auto !important;
+      padding: 8px 12px !important;
+      border-radius: 10px !important;
+    }
+
+    .col-12 { grid-column: span 12; }
+    .col-6 { grid-column: span 6; }
+    @media (max-width: 880px) { .col-6 { grid-column: span 12; } }
+
+    .list { display: flex; flex-direction: column; gap: 10px; }
+
+    .live-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .live-left { min-width: 0; }
+    .live-title { font-weight: 900; }
+    .live-url { margin-top: 6px; opacity: .78; font-size: 12px; word-break: break-all; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions button { width: auto; padding: 10px 12px; border-radius: 12px; font-weight: 900; cursor: pointer; }
+
+    .notice {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.06);
+      font-size: 12px;
+      opacity: .9;
+      display: none;
+    }
+    .notice.show { display: block; }
+  </style>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+      authDomain: "sistema-bope.firebaseapp.com",
+      projectId: "sistema-bope",
+      storageBucket: "sistema-bope.firebasestorage.app",
+      messagingSenderId: "777994155306",
+      appId: "1:777994155306:web:a1c31903c6128a30acda53"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+  </script>
+</head>
+
+<body>
+  <!-- Menu do sistema -->
+  <script src="menu-loader.js"></script>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>📺 Oficiais ao vivo</h1>
+          <p>Somente <b>COMANDO</b> pode cadastrar/editar. As lives ativas aparecem no portal como notícia oficial.</p>
+        </div>
+        <div class="pill" id="userPill">Carregando...</div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="col-6 card">
+        <div class="section-title">
+          <span>✍️ Cadastrar / editar</span>
+          <span class="chip" id="formChip">Novo</span>
+        </div>
+
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <label class="muted">Plataforma</label>
+          <select id="plataforma">
+            <option value="Twitch">Twitch</option>
+            <option value="TikTok">TikTok</option>
+            <option value="YouTube">YouTube</option>
+            <option value="Kick">Kick</option>
+            <option value="Outro">Outro</option>
+          </select>
+
+          <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:10px; margin-top:10px;">
+            <div>
+              <label class="muted">Status</label>
+              <select id="ativo">
+                <option value="true">Ao vivo (ativo)</option>
+                <option value="false">Offline (inativo)</option>
+              </select>
+            </div>
+            <div>
+              <label class="muted">Título</label>
+              <input id="titulo" type="text" placeholder="Ex: Operação em andamento — atualização" />
+            </div>
+          </div>
+
+          <label class="muted" style="margin-top:10px;">Link</label>
+          <input id="url" type="text" placeholder="https://twitch.tv/..." />
+
+          <div class="btn-row">
+            <button class="btn-green" id="btnSalvar" type="button">Salvar</button>
+            <button class="btn-blue" id="btnLimpar" type="button">Limpar</button>
+          </div>
+
+          <div class="notice" id="notice"></div>
+          <div class="muted" style="margin-top:10px;">
+            Coleção no Firestore: <b>lives</b> (campos: plataforma, titulo, url, ativo, updatedAt)
+          </div>
+        </div>
+      </div>
+
+      <div class="col-6 card">
+        <div class="section-title">
+          <span>📋 Lives cadastradas</span>
+          <button class="btn-blue" id="btnRecarregar" type="button" style="width:auto; padding: 8px 12px; border-radius: 12px;">Recarregar</button>
+        </div>
+
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <div class="list" id="lista"></div>
+        </div>
+      </div>
+
+      <div class="col-12 card">
+        <div class="section-title">
+          <span>📰 Como aparece no Portal</span>
+          <span class="chip">Notícia fixa</span>
+        </div>
+        <div class="login-card">
+<img src="assets/eb.png" alt="EB" class="logo-eb">
+          <div class="muted">
+            No <b>PORTAL</b>, vai existir sempre a notícia <b>“📺 Oficiais ao vivo”</b>.
+            Se você marcar uma live como <b>Ativo</b>, ela aparece lá automaticamente.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Proteção: precisa estar logado + ser comando
+    const usuario = sessionStorage.getItem("usuario");
+    const nivel = (sessionStorage.getItem("nivel") || "").toLowerCase();
+
+    if (!usuario) window.location.href = "index.html";
+    if (nivel !== "comando") {
+      alert("Acesso negado. Página restrita ao Comando.");
+      window.location.href = "portal.html";
+    }
+
+    // Pill do usuário
+    const userPill = document.getElementById("userPill");
+    userPill.textContent = `👤 ${usuario} • ${nivel.toUpperCase()}`;
+
+    const $ = (id) => document.getElementById(id);
+    const lista = $("lista");
+    const notice = $("notice");
+    const formChip = $("formChip");
+
+    let editingId = null;
+
+    function showNotice(msg) {
+      notice.textContent = msg;
+      notice.classList.add("show");
+      setTimeout(() => notice.classList.remove("show"), 3500);
+    }
+
+    function sanitizeUrl(u){
+      const url = (u || "").trim();
+      if (!url) return "";
+      if (!/^https?:\/\//i.test(url)) return "https://" + url;
+      return url;
+    }
+
+    function clearForm(){
+      editingId = null;
+      formChip.textContent = "Novo";
+      $("plataforma").value = "Twitch";
+      $("ativo").value = "true";
+      $("titulo").value = "";
+      $("url").value = "";
+      $("btnSalvar").textContent = "Salvar";
+    }
+
+    async function salvar(){
+      const plataforma = $("plataforma").value.trim();
+      const ativo = $("ativo").value === "true";
+      const titulo = $("titulo").value.trim();
+      const url = sanitizeUrl($("url").value);
+
+      if (!titulo) return showNotice("Informe um título.");
+      if (!url) return showNotice("Informe o link da live.");
+
+      const payload = {
+        plataforma,
+        ativo,
+        titulo,
+        url,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      try {
+        if (editingId) {
+          delete payload.createdAt;
+          await db.collection("lives").doc(editingId).update(payload);
+          showNotice("Live atualizada.");
+        } else {
+          await db.collection("lives").add(payload);
+          showNotice("Live cadastrada.");
+        }
+        clearForm();
+        await carregar();
+      } catch (e) {
+        console.error(e);
+        showNotice("Erro ao salvar. Veja o console.");
+      }
+    }
+
+    async function toggleAtivo(id, current){
+      try {
+        await db.collection("lives").doc(id).update({
+          ativo: !current,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await carregar();
+      } catch (e) {
+        console.error(e);
+        showNotice("Erro ao alterar status.");
+      }
+    }
+
+    async function excluir(id){
+      if (!confirm("Deseja excluir esta live?")) return;
+      try {
+        await db.collection("lives").doc(id).delete();
+        await carregar();
+      } catch (e) {
+        console.error(e);
+        showNotice("Erro ao excluir.");
+      }
+    }
+
+    function renderItem(doc){
+      const data = doc.data();
+      const row = document.createElement("div");
+      row.className = "live-row";
+
+      const left = document.createElement("div");
+      left.className = "live-left";
+
+      const top = document.createElement("div");
+      top.style.display = "flex";
+      top.style.alignItems = "center";
+      top.style.gap = "8px";
+      top.style.flexWrap = "wrap";
+
+      const plat = document.createElement("span");
+      plat.className = "chip";
+      plat.textContent = data.plataforma || "Outro";
+
+      const st = document.createElement("span");
+      st.className = "chip " + (data.ativo ? "chip-live" : "chip-off");
+      st.textContent = data.ativo ? "AO VIVO" : "OFFLINE";
+
+      top.appendChild(plat);
+      top.appendChild(st);
+
+      const title = document.createElement("div");
+      title.className = "live-title";
+      title.textContent = data.titulo || "(sem título)";
+
+      const url = document.createElement("div");
+      url.className = "live-url";
+      url.textContent = data.url || "";
+
+      left.appendChild(top);
+      left.appendChild(title);
+      left.appendChild(url);
+
+      const right = document.createElement("div");
+      right.className = "actions";
+
+      const btnAbrir = document.createElement("button");
+      btnAbrir.className = "btn-blue";
+      btnAbrir.textContent = "Abrir";
+      btnAbrir.onclick = () => window.open(data.url, "_blank", "noopener");
+
+      const btnEditar = document.createElement("button");
+      btnEditar.className = "btn-blue";
+      btnEditar.textContent = "Editar";
+      btnEditar.onclick = () => {
+        editingId = doc.id;
+        formChip.textContent = "Editando";
+        $("plataforma").value = data.plataforma || "Outro";
+        $("ativo").value = String(!!data.ativo);
+        $("titulo").value = data.titulo || "";
+        $("url").value = data.url || "";
+        $("btnSalvar").textContent = "Atualizar";
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      };
+
+      const btnToggle = document.createElement("button");
+      btnToggle.className = "btn-green";
+      btnToggle.textContent = data.ativo ? "Desativar" : "Ativar";
+      btnToggle.onclick = () => toggleAtivo(doc.id, !!data.ativo);
+
+      const btnExcluir = document.createElement("button");
+      btnExcluir.className = "btn-red";
+      btnExcluir.textContent = "Excluir";
+      btnExcluir.onclick = () => excluir(doc.id);
+
+      right.appendChild(btnAbrir);
+      right.appendChild(btnEditar);
+      right.appendChild(btnToggle);
+      right.appendChild(btnExcluir);
+
+      row.appendChild(left);
+      row.appendChild(right);
+      return row;
+    }
+
+    async function carregar(){
+      lista.innerHTML = "";
+      try {
+        const snap = await db.collection("lives").orderBy("updatedAt", "desc").get();
+        if (snap.empty) {
+          const div = document.createElement("div");
+          div.className = "muted";
+          div.textContent = "Nenhuma live cadastrada.";
+          lista.appendChild(div);
+          return;
+        }
+        snap.forEach(doc => lista.appendChild(renderItem(doc)));
+      } catch (e) {
+        console.error(e);
+        showNotice("Erro ao carregar. Veja o console.");
+      }
+    }
+
+    $("btnSalvar").addEventListener("click", salvar);
+    $("btnLimpar").addEventListener("click", clearForm);
+    $("btnRecarregar").addEventListener("click", carregar);
+
+    clearForm();
+    carregar();
+  </script>
+</body>
+</html>

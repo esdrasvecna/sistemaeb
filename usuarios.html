@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuários - EXÉRCITO</title>
+
+  <link rel="assets/eb.png" type="image/png">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body { background:#1e1e1e; color:#fff; font-family: Arial, sans-serif; }
+
+    .page {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 18px 14px 34px;
+    }
+
+    .hero {
+      margin-top: 14px;
+      border-radius: 18px;
+      padding: 18px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+      backdrop-filter: blur(6px);
+    }
+    .hero h1 { margin:0; font-size:22px; }
+    .hero p { margin:8px 0 0; opacity:.82; }
+
+    .panel {
+      margin-top:14px;
+      border-radius:18px;
+      padding:14px;
+      background: rgba(0,0,0,0.35);
+      border:1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(6px);
+    }
+
+    .panel h2 {
+      margin:0 0 12px 0;
+      font-size:16px;
+      opacity:.95;
+    }
+
+    .login-card {
+      background: rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.25);
+    }
+
+    .user-card {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      background: rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.10);
+      border-radius:14px;
+      padding:14px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.20);
+      transition: transform .16s ease, filter .16s ease;
+    }
+    .user-card:hover { transform: translateY(-2px); filter: brightness(1.03); }
+
+    .left {
+      min-width:0;
+    }
+
+    .nome {
+      font-weight:900;
+      font-size:15px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .meta {
+      font-size:12px;
+      opacity:.8;
+      margin-top:4px;
+    }
+
+    .badges {
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:6px;
+    }
+
+    .chip {
+      font-size:12px;
+      font-weight:900;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.10);
+      white-space:nowrap;
+    }
+
+    .acoes {
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    .toggle {
+      cursor:pointer;
+      padding:6px 10px;
+      border-radius:10px;
+      font-size:12px;
+      font-weight:900;
+      border:none;
+      color:#fff;
+    }
+    .on { background:#2ecc71; }
+    .off { background:#7f8c8d; }
+
+    .btn-red {
+      background:#e74c3c;
+      border:none;
+      padding:6px 10px;
+      border-radius:10px;
+      font-size:12px;
+      font-weight:900;
+      color:#fff;
+      cursor:pointer;
+    }
+
+    .list {
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .muted { opacity:.75; font-size:12px; }
+
+    @media(max-width:760px){
+      .user-card { flex-direction:column; align-items:flex-start; }
+      .acoes { width:100%; justify-content:flex-end; }
+    }
+  </style>
+</head>
+
+<body>
+<script src="menu-loader.js"></script>
+
+<main class="page">
+  <section class="hero">
+    <h1>Usuários</h1>
+    <p>Gerencie usuários, permissões e status de instrutor.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Lista de Usuários</h2>
+    <div class="list" id="listaUsuarios"></div>
+  </section>
+</main>
+
+<script>
+  const usuario = sessionStorage.getItem("usuario");
+  const nivel = sessionStorage.getItem("nivel");
+
+  if (!usuario || nivel !== "comando") {
+    window.location.href = "portal.html";
+  }
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC0ZrUAeNGBTZefNuoL9Qf9iJBtpaIwG7M",
+    authDomain: "sistema-bope.firebaseapp.com",
+    projectId: "sistema-bope"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  const lista = document.getElementById("listaUsuarios");
+
+  function renderUsuarios() {
+    lista.innerHTML = "";
+
+    db.collection("whitelist").orderBy("nome").onSnapshot(snapshot => {
+      snapshot.forEach(doc => {
+        const u = doc.data();
+        const nome = u.nome || doc.id;
+
+        const card = document.createElement("div");
+        card.className = "user-card";
+
+        const isInstrutor = u.instrutor === true || u.instrutor === "sim";
+
+        card.innerHTML = `
+          <div class="left">
+            <div class="nome">${nome}</div>
+            <div class="meta">Nível: ${u.nivel || "—"}</div>
+
+            <div class="meta" style="margin-top:8px;">
+              Cargo:
+              <select class="sel-cargo" style="margin-left:8px; padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.06); color:#fff;">
+                <option value="">—</option>
+<optgroup label="Praças">
+  <option value="Recruta">Recruta</option>
+  <option value="Soldado">Soldado</option>
+  <option value="Cabo">Cabo</option>
+  <option value="3º Sargento">3º Sargento</option>
+  <option value="2º Sargento">2º Sargento</option>
+  <option value="1º Sargento">1º Sargento</option>
+  <option value="Subtenente">Subtenente</option>
+</optgroup>
+<optgroup label="Oficiais">
+  <option value="Aspirante">Aspirante</option>
+  <option value="2º Tenente">2º Tenente</option>
+  <option value="1º Tenente">1º Tenente</option>
+  <option value="Capitão">Capitão</option>
+  <option value="Major">Major</option>
+  <option value="Tenente-Coronel">Tenente-Coronel</option>
+  <option value="Coronel">Coronel</option>
+</optgroup>
+              </select>
+            </div>
+
+            <div class="badges">
+              ${isInstrutor ? `<span class="chip">Instrutor</span>` : ""}
+              ${u.nivel === "comando" ? `<span class="chip">Comando</span>` : ""}
+            </div>
+          </div>
+
+          <div class="acoes">
+            <button class="toggle ${isInstrutor ? "on" : "off"}">
+              ${isInstrutor ? "Instrutor: SIM" : "Instrutor: NÃO"}
+            </button>
+            <button class="btn-red">Excluir</button>
+          </div>
+        `;
+
+        // Toggle instrutor
+        const btnToggle = card.querySelector(".toggle");
+        btnToggle.onclick = async () => {
+          await db.collection("whitelist").doc(doc.id).update({
+            instrutor: !isInstrutor
+          });
+        };
+
+        // Excluir usuário
+        const btnExcluir = card.querySelector(".btn-red");
+        btnExcluir.onclick = async () => {
+          if (!confirm(`Excluir usuário ${nome}?`)) return;
+          await db.collection("whitelist").doc(doc.id).delete();
+        };
+
+
+        // Cargo
+        const selCargo = card.querySelector(".sel-cargo");
+        if (selCargo) {
+          selCargo.value = u.cargo || "";
+          selCargo.onchange = async () => {
+            await db.collection("whitelist").doc(doc.id).update({
+              cargo: selCargo.value || ""
+            });
+          };
+        }
+
+        lista.appendChild(card);
+      });
+    });
+  }
+
+  renderUsuarios();
+</script>
+</body>
+</html>
