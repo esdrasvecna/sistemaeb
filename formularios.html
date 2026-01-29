@@ -265,7 +265,7 @@
       <div class="hero-top">
         <div>
           <h1>🪂 Formulários</h1>
-          <p>Área de formulários do <b>Exército</b>. Você preenche os formulários abertos da sua <b>guarnição</b>. Quem é <b>COMANDO</b> pode criar e finalizar.</p>
+          <p>Área de formulários do <b>Exército</b>. Você pode preencher os formulários abertos (a guarnição é só para organização). Quem é <b>COMANDO</b> pode criar e finalizar.</p>
         </div>
         <div class="pill" id="userPill">Carregando...</div>
       </div>
@@ -403,18 +403,10 @@
     const usuario = sessionStorage.getItem("usuario");
     const nivel = (sessionStorage.getItem("nivel") || "").toLowerCase();
     const patente = (sessionStorage.getItem("patente") || "").toLowerCase();
-    const cargo = (sessionStorage.getItem("cargo") || "").toLowerCase();
+    const guarnicao = (sessionStorage.getItem("guarnicao") || "").toLowerCase();
     const isComando = nivel === "comando";
-    const cargosPermitidos = ["paraquedista","infantaria","polícia do exército","policia do exercito","forças especiais","forcas especiais","cavalaria mecanizada","bavex"];
-    const meuCargo = (cargo || "").toLowerCase().trim();
-    const isCargoPermitido = cargosPermitidos.includes(meuCargo);
 
     if (!usuario) window.location.href = "index.html";
-    if (!(isComando || isCargoPermitido)) {
-      alert("Acesso restrito por guarnição/cargo.");
-      window.location.href = "portal.html";
-    }
-
     document.getElementById("userPill").textContent = `👤 ${usuario} • ${isComando ? "COMANDO" : (cargo || "USUÁRIO")}`;
 
     // Builder só comando
@@ -423,29 +415,20 @@
     // Filtro (guarnição = cargo)
     const filtroCargoSel = document.getElementById("filtroCargo");
     if (filtroCargoSel) {
-      if (!isComando) {
-        // remove "Todas" e trava o filtro
-        const optTodos = Array.from(filtroCargoSel.options).find(o => o.value === "__TODOS__");
-        if (optTodos) optTodos.remove();
-        filtroCargoSel.value = "__MEU__";
-        filtroCargoSel.disabled = true;
-        filtroCargoSel.title = "Filtro definido pelo seu cargo.";
-      } else {
-        filtroCargoSel.value = "__MEU__";
-      }
-      filtroCargoSel.addEventListener("change", () => loadForms());
+      if (guarnicao) filtroCargoSel.value = "__MEU__";
+        else filtroCargoSel.value = "__TODOS__";
+filtroCargoSel.addEventListener("change", () => loadForms());
     }
 
-    // Builder: pré-seleciona o cargo do usuário
+    // Builder: pré-seleciona a guarnição do usuário (se houver)
     const formAlvo = document.getElementById("formAlvoCargo");
-    if (formAlvo && cargo) {
-      const c = cargo.toLowerCase().trim();
-      const opt = Array.from(formAlvo.options).find(o => o.value.toLowerCase().trim() === c);
+    if (formAlvo && guarnicao) {
+      const g = guarnicao.toLowerCase().trim();
+      const opt = Array.from(formAlvo.options).find(o => o.value.toLowerCase().trim() === g);
       if (opt) formAlvo.value = opt.value;
     }
 
-
-    // ===== Helpers =====
+// ===== Helpers =====
     function normStr(s){
       return (s || "").toString().toLowerCase().trim()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -535,8 +518,8 @@
             criadoPor: usuario,
             criadoEm: ts(),
             atualizadoEm: ts(),
-            alvoCargo: (document.getElementById("formAlvoCargo").value || "").trim(),
-            alvoCargoNorm: normStr(document.getElementById("formAlvoCargo").value || "")
+            alvoGuarnicao: (document.getElementById("formAlvoCargo").value || "").trim(),
+            alvoGuarnicaoNorm: normStr(document.getElementById("formAlvoCargo").value || "")
           });
           showNotice(builderNotice, "✅ Formulário publicado.");
           $("btnLimparForm").click();
@@ -780,18 +763,18 @@
       const sel = document.getElementById("filtroCargo");
       let selected = sel ? sel.value : "__MEU__";
 
-      // comando pode escolher; usuário comum fica no próprio cargo
-      if (!isComando) selected = "__MEU__";
-
-      let filtroCargo = (cargo || "").trim();
+      // filtro é só organização (não é permissão)
+      let filtroCargo = (guarnicao || "").trim();
       if (selected === "__TODOS__") filtroCargo = "__TODOS__";
       else if (selected !== "__MEU__") filtroCargo = selected;
 
       // normaliza
       let filtroLower = normStr(filtroCargo || "");
 
-      // Se usuário não tem cargo definido, mostra todos
+      // Se usuário não tem guarnição definida, mostra todos
       if (!filtroLower) filtroLower = "__todos__";
+      // Se escolheu "Minha guarnição" mas não tem guarnição, vira "Todos"
+      if (selected === "__MEU__" && !normStr(guarnicao)) filtroLower = "__todos__";
 
       if (window._unsubForms) { try { window._unsubForms(); } catch(e) {} }
 
@@ -799,7 +782,7 @@
         const all = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) }));
 
         const normAlvo = (f) => {
-          const alvo = (f.alvoCargoNorm || f.alvoCargo || "").toString().trim();
+          const alvo = (f.alvoGuarnicaoNorm || f.alvoGuarnicao || f.alvoCargoNorm || f.alvoCargo || "").toString().trim();
           if (!alvo) return "__geral__"; // legacy: formulários antigos valem para todos
           return normStr(alvo);
         };
@@ -811,7 +794,7 @@
         });
 
         if (!filtrados.length) {
-          formsList.innerHTML = `<div class="muted">Nenhum formulário para este cargo.</div>`;
+          formsList.innerHTML = `<div class="muted">Nenhum formulário para este filtro.</div>`;
           openCount.textContent = "Abertos: 0";
           closedCount.textContent = "Fechados: 0";
           return;

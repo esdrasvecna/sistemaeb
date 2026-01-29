@@ -178,9 +178,9 @@ const data = snap.data();
     sessionStorage.setItem("nivel", data.nivel);
     // opcional: usado para permissões específicas (ex.: paraquedista)
     sessionStorage.setItem("patente", data.patente || "");
-    sessionStorage.setItem("cargo", data.cargo || "");
-
-    window.location.href = "portal.html";
+    sessionStorage.setItem("guarnicao", data.guarnicao || data.cargo || "");
+    sessionStorage.setItem("cargo", "");
+window.location.href = "portal.html";
 
   } catch (e) {
     console.error(e);
