@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Usuários - EXÉRCITO</title>
 
-  <link rel="icon" href="assets/img/bope-logo.png" type="image/png">
+  <link rel="icon" href="assets/eb.png" type="image/png">
   <link rel="stylesheet" href="style.css">
 
   <!-- Firebase compat -->
@@ -183,84 +183,136 @@
 
   const lista = document.getElementById("listaUsuarios");
 
-  function renderUsuarios() {
+  
+  function byNome(a,b){
+    const na = (a.nome||a.id||"").toString().toLowerCase();
+    const nb = (b.nome||b.id||"").toString().toLowerCase();
+    return na.localeCompare(nb);
+  }
+
+  function renderLista(items){
     lista.innerHTML = "";
+    if (!items.length){
+      lista.innerHTML = `<div class="meta" style="opacity:.75;padding:14px 6px;">Nenhum usuário encontrado.</div>`;
+      return;
+    }
 
-    db.collection("whitelist").orderBy("nome").onSnapshot(snapshot => {
-      snapshot.forEach(doc => {
-        const u = doc.data();
-        const nome = u.nome || doc.id;
+    items.sort(byNome).forEach(({id,data}) => {
+      const u = data || {};
+      const nome = u.nome || id;
 
-        const card = document.createElement("div");
-        card.className = "user-card";
+      const card = document.createElement("div");
+      card.className = "user-card";
 
-        const isInstrutor = u.instrutor === true || u.instrutor === "sim";
+      const isInstrutor = u.instrutor === true || u.instrutor === "sim";
 
-        card.innerHTML = `
-          <div class="left">
-            <div class="nome">${nome}</div>
-            <div class="meta">Patente: ${u.patente || "—"}</div>
-            <div class="meta">Nível: ${u.nivel || "—"}</div>
+      card.innerHTML = `
+        <div class="left">
+          <div class="nome">${nome}</div>
+          <div class="meta">Patente: ${u.patente || "—"}</div>
+          <div class="meta">Nível: ${u.nivel || "—"}</div>
 
-            <div class="meta" style="margin-top:8px;">
-              
-              Guarnição:
-              <select class="sel-guarnicao" style="margin-left:8px; padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.06); color:#fff;">
-                <option value="">—</option>
-  <optgroup label="Guarnições">
-    <option value="Paraquedista">Paraquedista</option>
-    <option value="Infantaria">Infantaria</option>
-    <option value="Polícia do Exército">Polícia do Exército</option>
-    <option value="Forças Especiais">Forças Especiais</option>
-    <option value="Cavalaria Mecanizada">Cavalaria Mecanizada</option>
-    <option value="BAvEx">BAvEx</option>
-  </optgroup>
-              </select>
-            </div>
-
-            <div class="badges">
-              ${isInstrutor ? `<span class="chip">Instrutor</span>` : ""}
-              ${u.nivel === "comando" ? `<span class="chip">Comando</span>` : ""}
-            </div>
+          <div class="meta" style="margin-top:8px;">
+            Guarnição:
+            <select class="sel-guarnicao" style="margin-left:8px; padding:6px 10px; border-radius:10px; border:1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.06); color:#fff;">
+              <option value="">—</option>
+              <optgroup label="Guarnições">
+                <option value="Paraquedista">Paraquedista</option>
+                <option value="Infantaria">Infantaria</option>
+                <option value="Polícia do Exército">Polícia do Exército</option>
+                <option value="Forças Especiais">Forças Especiais</option>
+                <option value="Cavalaria Mecanizada">Cavalaria Mecanizada</option>
+                <option value="BAvEx">BAvEx</option>
+              </optgroup>
+            </select>
           </div>
 
-          <div class="acoes">
-            <button class="toggle ${isInstrutor ? "on" : "off"}">
-              ${isInstrutor ? "Instrutor: SIM" : "Instrutor: NÃO"}
-            </button>
-            <button class="btn-red">Excluir</button>
+          <div class="badges">
+            ${isInstrutor ? `<span class="chip">Instrutor</span>` : ""}
+            ${u.nivel === "comando" ? `<span class="chip">Comando</span>` : ""}
           </div>
-        `;
+        </div>
 
-        // Toggle instrutor
-        const btnToggle = card.querySelector(".toggle");
-        btnToggle.onclick = async () => {
-          await db.collection("whitelist").doc(doc.id).update({
-            instrutor: !isInstrutor
-          });
-        };
+        <div class="acoes">
+          <button class="toggle ${isInstrutor ? "on" : "off"}">
+            ${isInstrutor ? "Instrutor: SIM" : "Instrutor: NÃO"}
+          </button>
+          <button class="btn-red">Excluir</button>
+        </div>
+      `;
 
-        // Excluir usuário
-        const btnExcluir = card.querySelector(".btn-red");
-        btnExcluir.onclick = async () => {
-          if (!confirm(`Excluir usuário ${nome}?`)) return;
-          await db.collection("whitelist").doc(doc.id).delete();
-        };
-
-
-        // Cargo
-        const const selGuarnicao = card.querySelector(".sel-guarnicao");
-        if (selGuarnicao) {
-          selGuarnicao.value = u.guarnicao || "";
-          selGuarnicao.onchange = async () => {
-            await db.collection("whitelist").doc(doc.id).update({
-              guarnicao: selGuarnicao.value || ""
-            });
-          };
+      // Toggle instrutor
+      const btnToggle = card.querySelector(".toggle");
+      btnToggle.onclick = async () => {
+        try{
+          await db.collection("whitelist").doc(id).update({ instrutor: !isInstrutor });
+        }catch(e){
+          alert("Erro ao atualizar instrutor: " + (e.message||e));
+          console.error(e);
         }
+      };
 
-        lista.appendChild(card);
-      });
+      // Excluir usuário
+      const btnExcluir = card.querySelector(".btn-red");
+      btnExcluir.onclick = async () => {
+        if (!confirm(`Excluir usuário ${nome}?`)) return;
+        try{
+          await db.collection("whitelist").doc(id).delete();
+        }catch(e){
+          alert("Erro ao excluir usuário: " + (e.message||e));
+          console.error(e);
+        }
+      };
+
+      // Guarnição (apenas organização)
+      const selGuarnicao = card.querySelector(".sel-guarnicao");
+      if (selGuarnicao) {
+        selGuarnicao.value = u.guarnicao || "";
+        selGuarnicao.onchange = async () => {
+          try{
+            await db.collection("whitelist").doc(id).update({ guarnicao: selGuarnicao.value || "" });
+          }catch(e){
+            alert("Erro ao salvar guarnição: " + (e.message||e));
+            console.error(e);
+          }
+        };
+      }
+
+      lista.appendChild(card);
+    });
+  }
+
+  // Lista principal: whitelist (sem orderBy pra não depender de índices/campos)
+  function renderUsuarios() {
+    lista.innerHTML = `<div class="meta" style="opacity:.75;padding:14px 6px;">Carregando usuários...</div>`;
+    db.collection("whitelist").onSnapshot(snapshot => {
+      const items = [];
+      snapshot.forEach(doc => items.push({id: doc.id, data: doc.data()}));
+
+      // Fallback: se whitelist estiver vazia, tenta coleções antigas (se existirem)
+      if (items.length === 0) {
+        Promise.allSettled([
+          db.collection("usuarios").get(),
+          db.collection("pessoas").get()
+        ]).then(results => {
+          const extra = [];
+          results.forEach(r => {
+            if (r.status === "fulfilled") {
+              r.value.forEach(d => extra.push({id: d.id, data: d.data()}));
+            }
+          });
+          renderLista(extra);
+        }).catch(err => {
+          console.error(err);
+          renderLista(items);
+        });
+        return;
+      }
+
+      renderLista(items);
+    }, err => {
+      console.error(err);
+      lista.innerHTML = `<div class="meta" style="color:#ffb4b4;padding:14px 6px;">Erro ao carregar usuários: ${err.message || err}</div>`;
     });
   }
 
